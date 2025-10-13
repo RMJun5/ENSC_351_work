@@ -2,12 +2,30 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <reaction_timer.h>
 
-// Adjust these to your board's LED paths.
 // List available LEDs with: ls /sys/class/leds
-#define GREEN_TRIGGER_PATH    "/sys/class/leds/ACT/trigger"
-#define GREEN_BRIGHTNESS_PATH "/sys/class/leds/ACT/brightness"
+int set_act_trigger(const char *trigger)
+{
+    FILE *f = fopen('G_LED_TRIGGER_PATH', "w");
+    if (f == NULL) {
+        perror("open trigger");
+        return -1;
+    }
 
+    int n = fprintf(f, "%s", trigger);  // "none", "heartbeat", "timer", ...
+    if (n <= 0) {
+        perror("write trigger");
+        fclose(f);
+        return -1;
+    }
+
+    if (fclose(f) != 0) {
+        perror("close trigger");
+        return -1;
+    }
+    return 0;
+}
 int main(){
 
     printf("Hello embedded world, from Richard!");
