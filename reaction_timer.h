@@ -16,10 +16,6 @@
     #define RT_MAX_PATH 256
 #endif
 
-#define G_LED_TRIGGER_PATH "/sys/class/leds/ACT/trigger"  // "none","heartbeat","timer"
-#define G_LED_BRIGHTNESS_PATH "/sys/class/leds/ACT/brightness" // 0 and 1
-#define R_LED_TRIGGER_PATH "/sys/class/leds/PWR/trigger" // 
-#define R_LED_BRIGHTNESS_PATH "/sys/class/leds/PWR/brightness"
 
 // timing using nanosleep
 static inline void rt_sleep_ms(long ms){
