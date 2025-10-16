@@ -40,7 +40,7 @@ static inline int rt_write_sysfs_(const char *path, const char *s){
 
 // Build "/sys/class/leds/<name>/<leaf>" into buf
 static inline int rt_build_led_path_(char *buf, size_t buflen,
-                                     const char *name, const char *leaf) {
+  const char *name, const char *leaf) {
     if (!buf || !name || !leaf) return -1;
     int n = snprintf(buf, buflen, "/sys/class/leds/%s/%s", name, leaf);
     return (n < 0 || (size_t)n >= buflen) ? -1 : 0;
@@ -76,69 +76,40 @@ static inline int rt_spi_opendevice(const char *dev, uint8_t mode, uint8_t bits,
     if(fd<0) {perror(dev); return -1;}
     
     if (ioctl(fd, SPI_IOC_WR_MODE, &mode) == -1) {
-        perror("SPI_IOC_WR_MODE"); close(fd); return -1;
+        perror("SPI_IOC_WR_MODE"); close(fd); return 1;
     }
     if (ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits) == -1) {
-        perror("SPI_IOC_WR_BITS_PER_WORD"); close(fd); return -1;
+        perror("SPI_IOC_WR_BITS_PER_WORD"); close(fd); return 1;
     }
     if (ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed_hz) == -1) {
-        perror("SPI_IOC_WR_MAX_SPEED_HZ"); close(fd); return -1;
+        perror("SPI_IOC_WR_MAX_SPEED_HZ"); close(fd); return 1;
     }
     return fd;
 }
 
-static inline int rt_read_adc_ch(int fd, int ch, uint32_t speed_hz) {
+static inline int rt_read_ch(int fd, int ch, uint32_t speed_hz) {
     if (fd < 0 || ch < 0 || ch > 7) return -1;
-    uint8_t tx[3];
-    uint8_t rx[3];
+    uint8_t tx[3] = { (uint8_t)(0x06 | ((ch & 0x04) >> 2)), (uint8_t)((ch & 0x03) << 6), 0x00 };
+    uint8_t rx[3] = {0};
     tx[0] = (uint8_t)(0x06 | ((ch & 0x04) >> 2));
     tx[1] = (uint8_t)((ch & 0x03) << 6);
     tx[2] = 0x00;
-    memset(rx, 0, sizeof(rx));
-    struct spi_ioc_transfer tr;
-    memset(&tr, 0, sizeof(tr));
-    tr.tx_buf = (unsigned long)tx;
-    tr.rx_buf = (unsigned long)rx;
-    tr.len = 3;
-    tr.speed_hz = speed_hz;
-    tr.bits_per_word = 8;
-    tr.delay_usecs = 0;
-    tr.cs_change = 0;
+    struct spi_ioc_transfer tr = {
+        .tx_buf = (unsigned long)tx,
+        .rx_buf = (unsigned long)rx,
+        .len = 3,
+        .speed_hz = speed_hz,
+        .bits_per_word = 8,
+        .cs_change = 0
+    };
 
     if (ioctl(fd, SPI_IOC_MESSAGE(1), &tr) < 1) {
         perror("SPI_IOC_MESSAGE");
         return -1;
     }
 
-    int val = ((rx[1] & 0x0F) << 8) | rx[2];
+    int val = ((rx[1] & 0x0F) << 8) | rx[2]; //12-bit result
     return val;
-}
-
-static inline int rt_wait_joystick(int fd, int ch_up, int ch_down, int high_threshold, int low_threshold, int poll_ms) {
-    int printed = 0;
-    if (fd < 0) return -1;
-
-    while (1) {
-        int v_up = rt_read_adc_ch(fd, ch_up, 250000);
-        int v_down = rt_read_adc_ch(fd, ch_down, 250000);
-        if (v_up < 0 || v_down < 0) return -1;
-
-        int up_pressed   = (v_up >= high_threshold) || (v_up <= low_threshold);
-        int down_pressed = (v_down >= high_threshold) || (v_down <= low_threshold);
-
-        if (up_pressed || down_pressed) {
-            if (!printed) {
-                printf("Please let go of joystick\n");
-                fflush(stdout);
-                printed = 1;
-            }
-            rt_sleep_ms(poll_ms);
-            continue;
-        }
-
-        /* both in neutral range -> done */
-        return 0;
-    }
 }
 
 

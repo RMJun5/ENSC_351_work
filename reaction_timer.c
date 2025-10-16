@@ -20,12 +20,10 @@ uint32_t speed = 250000;
     printf("Now.... Get ready! \n");
     
     // open SPI
-    int fd = rt_spi_open_device(dev, mode, bits, speed);
-    if (fd < 0) {perror("open"); return 1;}
-    if (ioctl(fd, SPI_IOC_WR_MODE, &mode)==-1){perror("mode"); return 1;}
-    if (ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits) == -1) { perror("bpw"); return 1; }
-    if (ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed) == -1){ perror("speed"); return 1; }
-
+    fd = rt_spi_open_device(dev, mode, bits, speed);
+  
+    int up = rt_read_ch(fd,0,speed);
+    int down = rt_read_ch(fd,1,speed);
 
     if(rt_led_set_trigger(green,"none") !=0) return 1;
     if(rt_led_set_trigger(red,"none")!=0 ) return 1; 
@@ -41,8 +39,7 @@ uint32_t speed = 250000;
         rt_sleep_ms(250);
         if (rt_led_set_on(red,0)!=0) return 1;
     }
-    
-    rt_wait_joystick()
+  
     
     close(fd);
     return 0;   
