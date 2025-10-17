@@ -1,6 +1,8 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
+
 
 /* Default SPI device and default ADC channels for X/Y */
 #define JOY_DEFAULT_DEVICE    "/dev/spidev0.0"
@@ -15,11 +17,18 @@
 /* Opaque joystick handle */
 typedef struct joystick joystick_t;
 
-
+struct joystick { 
+    int fd;
+    uint32_t speed_hz;
+    int up;
+    int down;
+    int deadzone; // percent 0 to 100
+    bool direction; // 0 = up, 1 = down
+};
 /* Open joystick SPI device
    dev: device path (use JOY_DEFAULT_DEVICE or NULL for default)
    speed_hz: SPI speed (use JOY_DEFAULT_SPEED_HZ or 0 for default)
    ch: ADC channel numbers (0 or 1)
    Returns pointer to joystick_t on success, NULL on failure.
 */
-joystick_t *joy_open(const char *dev, uint32_t speed_hz, int ch);
+joystick_t *joy_open(const char *dev, uint32_t speed_hz, int ch_X, int ch_Y   );
