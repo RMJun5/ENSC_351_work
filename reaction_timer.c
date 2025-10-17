@@ -8,7 +8,32 @@
 #include <led.h>
 #include <joystick.h>
 #include <reaction_timer.h>
+#define JOY_CALIBRATION_ENABLED
 
+#ifdef JOY_CALIBRATION_ENABLED
+static void calibrate_joystick(joystick_t *joy) {
+/* quick interactive calibration: ask user to wiggle the stick for 3 seconds */
+printf("Calibration: please move the joystick through its full range for 3 seconds...\n");
+joy_calib_start(joy);
+const int CAL_MS = 3000;
+struct timespec t0, tnow;
+clock_gettime(CLOCK_MONOTONIC, &t0);
+while (1) {
+    int rawx = joy_read_raw(joy, JOY_DEFAULT_AXIS_X);
+    int rawy = joy_read_raw(joy, JOY_DEFAULT_AXIS_Y);
+    if (rawx >= 0 && rawy >= 0) {
+        joy_calib_update(joy, rawx, rawy);
+    }
+    nanosleep(&(struct timespec){0, 20000000L}, NULL); /* 20 ms */
+    clock_gettime(CLOCK_MONOTONIC, &tnow);
+    long elapsed_ms = (tnow.tv_sec - t0.tv_sec) * 1000 + (tnow.tv_nsec - t0.tv_nsec) / 1000000;
+    if (elapsed_ms >= CAL_MS) break;
+}
+joy_calib_finalize(joy);
+joy_calib_save(joy, "/tmp/joycalib.txt");   
+printf("Calibration done. minX=%d maxX=%d centerX=%d\n", joy->calib.min_x, joy->calib.max_x, joy->calib.center_x);
+}
+#endif /* JOY_CALIBRATION_ENABLED */
 
 int main(void){
 bool want_up = (rand() % 2) == 0; // randomly choose up or down 
@@ -32,7 +57,6 @@ uint32_t speed = 250000;
         perror("joy_open");
         return 1;
     }
-
     const int THRESHOLD = 600;       /* raw units above center to be considered pressed — tune this */
     int best_ms = -1;
 
@@ -127,6 +151,8 @@ uint32_t speed = 250000;
             if (pressed_ch != -1) break;
             if (elapsed_ms > 5000) {
                 printf("Too long! Exiting!\n");
+                g_set_act_on(0);
+                r_set_act_on(0);
                 joy_close(joy);
                 return 1;
             }
@@ -147,9 +173,11 @@ uint32_t speed = 250000;
                 best_ms = elapsed_ms;
                 printf("New best time: %d ms\n", best_ms);
             }
-            printf("This attempt: %d ms. Best: %d ms\n", elapsed_ms, best_ms);
+            printf("This attempt: %d ms. Best attempt: %d ms\n", elapsed_ms, best_ms);
             /* flash green 5 times in 1000ms total */
             flash_led(g_set_act_on, 5, 1000);
+            g_set_act_on(0);
+            r_set_act_on(0);
         } else if (pressed_down && !want_up) {
             printf("Correct! You moved DOWN.\n");
             if (best_ms < 0 || elapsed_ms < best_ms) {
@@ -158,21 +186,24 @@ uint32_t speed = 250000;
             }
             printf("This attempt: %d ms. Best: %d ms\n", elapsed_ms, best_ms);
             flash_led(g_set_act_on, 5, 1000); /* flash green on success */
+            g_set_act_on(0);
+            r_set_act_on(0);
         } else if (pressed_up || pressed_down) {
             /* pressed opposite direction (incorrect) */
             printf("Incorrect direction! You pressed %s.\n", pressed_up ? "UP" : "DOWN");
+            printf("correct direction was %s.\n", want_up ? "UP" : "DOWN");
             flash_led(r_set_act_on, 5, 1000); /* flash red 5 times in 1s */
+            g_set_act_on(0);
+            r_set_act_on(0);
         } else {
             /* Shouldn't happen: other axis (left/right) or unknown */
-            printf("Unexpected joystick input (left/right or unknown). Exiting.\n");
+            printf("User chose to quit(right/left input). Bye!\n");
             joy_close(joy);
             return 1;
         }
 
         /* small gap before next round */
         sleep_ms(500);
-    g_set_act_on(0);
-    r_set_act_on(0);
     /* unreachable, but clean up */
     joy_close(joy);
     return 0;
