@@ -12,7 +12,51 @@
 
 /* Expected ADC resolution used by normalization (12 => 0..4095).
    Set to 10 if using a 10-bit ADC (0..1023). */
-#define JOY_ADC_BITS          12
+#define JOY_ADC_BITS          8
+typedef enum {
+    DIR_NONE,
+    DIR_UP,
+    DIR_DOWN,
+    DIR_LEFT,
+    DIR_RIGHT
+} joystick_direction_t;
+
+static bool joy_initialized = false;
+static joystick_t *g_joy = NULL;
+
+bool joystick_init(const char *device, uint32_t speed_hz, uint8_t mode, uint8_t bits,
+                   uint8_t ch0, uint8_t ch1) {
+    g_joy = joy_open(device, speed_hz, mode, bits, ch0, ch1);
+    if (!g_joy) return false;
+#ifdef JOY_CALIBRATION_ENABLED
+    calibrate_joystick(g_joy);
+#endif
+    joy_initialized = true;
+    return true;
+}
+
+void joystick_cleanup(void) {
+    if (g_joy) {
+        joy_close(g_joy);
+        g_joy = NULL;
+    }
+    joy_initialized = false;
+}
+
+joystick_direction_t joystick_get_direction(void) {
+    assert(joy_initialized);
+    int x = joy_read_raw(g_joy, JOY_DEFAULT_AXIS_X);
+    int y = joy_read_raw(g_joy, JOY_DEFAULT_AXIS_Y);
+    if (x < 0 || y < 0) return DIR_NONE;
+
+    int center = 1 << (JOY_ADC_BITS - 1);
+    const int THRESHOLD = 600;
+
+    if (abs(x - center) > THRESHOLD) return (x > center) ? DIR_UP : DIR_DOWN;
+    if (abs(y - center) > THRESHOLD) return (y > center) ? DIR_RIGHT : DIR_LEFT;
+
+    return DIR_NONE;
+}
 typedef struct {
     int min_x;
     int max_x;
@@ -43,7 +87,7 @@ struct joystick {
    ch: ADC channel numbers (0 or 1)
    Returns pointer to joystick_t on success, NULL on failure.
 */
-joystick_t *joy_open(const char *dev, uint32_t speed_hz, int mode, int ch_X, int ch_Y);
+joystick_t *joy_open(const char *dev, uint32_t speed_hz, int mode, int bit, int ch_X, int ch_Y);
 joystick_t *joy_read (int fd, int ch, uint32_t speed_hz);
 /* Start calibration: resets min/max to extreme/opposite values */
 void joy_calib_start(joystick_t *j);

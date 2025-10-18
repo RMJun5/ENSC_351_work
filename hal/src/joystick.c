@@ -13,7 +13,12 @@
 #include <errno.h>
 #include <math.h>
 
-joystick_t *joy_open(const char *dev, uint32_t speed_hz, int mode,int ch_X, int ch_Y) {
+static bool joystick_initialized = false;
+static joystick_t *g_joy = NULL;
+
+
+
+joystick_t *joy_open(const char *dev, uint32_t speed_hz, int mode, int bits, int ch_X, int ch_Y) {
     joystick_t *joy = malloc(sizeof(joystick_t));
     if (!joy) {
         perror("malloc");
@@ -45,6 +50,26 @@ joystick_t *joy_open(const char *dev, uint32_t speed_hz, int mode,int ch_X, int 
     
 }
 
+bool joystick_init(const char *dev, uint32_t speed_hz, int mode, int bits, int ch_X, int ch_Y) {
+    g_joy = joy_open(dev, speed_hz, mode, bits, ch_X, ch_Y);
+    if (!g_joy) return false;
+
+#ifdef JOY_CALIBRATION_ENABLED
+    calibrate_joystick(g_joy); // call your calibration code
+#endif
+
+    joystick_initialized = true;
+    return true;
+}
+
+void joystick_cleanup(void) {
+    if (g_joy) {
+        joy_close(g_joy);
+        g_joy = NULL;
+    }
+    joystick_initialized = false;
+}
+
 joystick_t *joy_read (int fd, int ch, uint32_t speed_hz){
     if (ch<0 || ch>7) return 1; // invalid channel 
     uint8_t tx[3] = { (uint8_t)(0x06 | ((ch & 0x04) >> 2)), (uint8_t)((ch & 0x03) << 6), 0x00 };
@@ -62,6 +87,21 @@ joystick_t *joy_read (int fd, int ch, uint32_t speed_hz){
     int val =  ((rx[1] & 0x0F) << 8) | rx[2]; // 12-bit result
     return val;
 }
+joystick_direction_t joystick_get_direction(void) {
+    assert(joystick_initialized);
+
+    int raw_x = joy_read_raw(g_joy, JOY_DEFAULT_AXIS_X);
+    int raw_y = joy_read_raw(g_joy, JOY_DEFAULT_AXIS_Y);
+
+    if (raw_x < 0 || raw_y < 0) return DIR_NONE;
+
+    if (joy_is_pressed_up(g_joy, raw_x)) return DIR_UP;
+    if (joy_is_pressed_down(g_joy, raw_y)) return DIR_DOWN;
+
+    // You can add left/right helpers if needed
+    return DIR_NONE;
+}
+
 #define JOY_CALIBRATION_DISABLED
 #ifdef JOY_CALIBRATION_DISABLED
 /* Start / reset calibration */
@@ -154,6 +194,21 @@ int joy_calib_load(joystick_t *j, const char *path) {
 /* Helper: determine if raw_x is pressed "up" (i.e., pushed upward strongly)
    We assume "up" maps to decreasing raw_x (depends on wiring; adjust if necessary).
 */
+joystick_direction_t joystick_get_direction(void) {
+    assert(joystick_initialized);
+
+    int raw_x = joy_read_raw(g_joy, JOY_DEFAULT_AXIS_X);
+    int raw_y = joy_read_raw(g_joy, JOY_DEFAULT_AXIS_Y);
+
+    if (raw_x < 0 || raw_y < 0) return DIR_NONE;
+
+    if (joy_is_pressed_up(g_joy, raw_x)) return DIR_UP;
+    if (joy_is_pressed_down(g_joy, raw_y)) return DIR_DOWN;
+
+    // You can add left/right helpers if needed
+    return DIR_NONE;
+}
+
 int joy_is_pressed_up(joystick_t *j, int raw_x) {
     if (!j || !j->calib.calibrated) return 0;
     double half_range = (j->calib.center_x - j->calib.min_x);
