@@ -4,6 +4,7 @@
         "math.h": "c",
         "errno.h": "c",
         "reaction_timer.h": "c",
-        "joystick.h": "c"
+        "joystick.h": "c",
+        "stdint.h": "c"
     }
 }

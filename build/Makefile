@@ -60,7 +60,7 @@ EQUALS = =
 CMAKE_SOURCE_DIR = /home/r1chmy0ungsun/ensc351/work/repo
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/r1chmy0ungsun/ensc351/work/repo
+CMAKE_BINARY_DIR = /home/r1chmy0ungsun/ensc351/work/repo/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -87,14 +87,14 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	cd /home/r1chmy0ungsun/ensc351/work/repo && $(CMAKE_COMMAND) -E cmake_progress_start /home/r1chmy0ungsun/ensc351/work/repo/CMakeFiles /home/r1chmy0ungsun/ensc351/work/repo/app//CMakeFiles/progress.marks
-	cd /home/r1chmy0ungsun/ensc351/work/repo && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 app/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/r1chmy0ungsun/ensc351/work/repo/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/r1chmy0ungsun/ensc351/work/repo/build/CMakeFiles /home/r1chmy0ungsun/ensc351/work/repo/build//CMakeFiles/progress.marks
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/r1chmy0ungsun/ensc351/work/repo/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	cd /home/r1chmy0ungsun/ensc351/work/repo && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 app/clean
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 clean
 .PHONY : clean
 
 # The main clean target
@@ -103,56 +103,44 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	cd /home/r1chmy0ungsun/ensc351/work/repo && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 app/preinstall
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	cd /home/r1chmy0ungsun/ensc351/work/repo && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 app/preinstall
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 preinstall
 .PHONY : preinstall/fast
 
 # clear depends
 depend:
-	cd /home/r1chmy0ungsun/ensc351/work/repo && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
+	$(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
-# Convenience name for target.
-app/CMakeFiles/reaction_timer.dir/rule:
-	cd /home/r1chmy0ungsun/ensc351/work/repo && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 app/CMakeFiles/reaction_timer.dir/rule
-.PHONY : app/CMakeFiles/reaction_timer.dir/rule
+#=============================================================================
+# Target rules for targets named hal
 
-# Convenience name for target.
-reaction_timer: app/CMakeFiles/reaction_timer.dir/rule
+# Build rule for target.
+hal: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 hal
+.PHONY : hal
+
+# fast build rule for target.
+hal/fast:
+	$(MAKE) $(MAKESILENT) -f hal/CMakeFiles/hal.dir/build.make hal/CMakeFiles/hal.dir/build
+.PHONY : hal/fast
+
+#=============================================================================
+# Target rules for targets named reaction_timer
+
+# Build rule for target.
+reaction_timer: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 reaction_timer
 .PHONY : reaction_timer
 
 # fast build rule for target.
 reaction_timer/fast:
-	cd /home/r1chmy0ungsun/ensc351/work/repo && $(MAKE) $(MAKESILENT) -f app/CMakeFiles/reaction_timer.dir/build.make app/CMakeFiles/reaction_timer.dir/build
+	$(MAKE) $(MAKESILENT) -f app/CMakeFiles/reaction_timer.dir/build.make app/CMakeFiles/reaction_timer.dir/build
 .PHONY : reaction_timer/fast
-
-src/reaction_timer.o: src/reaction_timer.c.o
-.PHONY : src/reaction_timer.o
-
-# target to build an object file
-src/reaction_timer.c.o:
-	cd /home/r1chmy0ungsun/ensc351/work/repo && $(MAKE) $(MAKESILENT) -f app/CMakeFiles/reaction_timer.dir/build.make app/CMakeFiles/reaction_timer.dir/src/reaction_timer.c.o
-.PHONY : src/reaction_timer.c.o
-
-src/reaction_timer.i: src/reaction_timer.c.i
-.PHONY : src/reaction_timer.i
-
-# target to preprocess a source file
-src/reaction_timer.c.i:
-	cd /home/r1chmy0ungsun/ensc351/work/repo && $(MAKE) $(MAKESILENT) -f app/CMakeFiles/reaction_timer.dir/build.make app/CMakeFiles/reaction_timer.dir/src/reaction_timer.c.i
-.PHONY : src/reaction_timer.c.i
-
-src/reaction_timer.s: src/reaction_timer.c.s
-.PHONY : src/reaction_timer.s
-
-# target to generate assembly for a file
-src/reaction_timer.c.s:
-	cd /home/r1chmy0ungsun/ensc351/work/repo && $(MAKE) $(MAKESILENT) -f app/CMakeFiles/reaction_timer.dir/build.make app/CMakeFiles/reaction_timer.dir/src/reaction_timer.c.s
-.PHONY : src/reaction_timer.c.s
 
 # Help Target
 help:
@@ -162,10 +150,8 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
+	@echo "... hal"
 	@echo "... reaction_timer"
-	@echo "... src/reaction_timer.o"
-	@echo "... src/reaction_timer.i"
-	@echo "... src/reaction_timer.s"
 .PHONY : help
 
 
@@ -177,6 +163,6 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
-	cd /home/r1chmy0ungsun/ensc351/work/repo && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
+	$(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
 .PHONY : cmake_check_build_system
 

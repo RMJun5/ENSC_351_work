@@ -130,30 +130,6 @@ hal/fast:
 	cd /home/r1chmy0ungsun/ensc351/work/repo && $(MAKE) $(MAKESILENT) -f hal/CMakeFiles/hal.dir/build.make hal/CMakeFiles/hal.dir/build
 .PHONY : hal/fast
 
-src/button.o: src/button.c.o
-.PHONY : src/button.o
-
-# target to build an object file
-src/button.c.o:
-	cd /home/r1chmy0ungsun/ensc351/work/repo && $(MAKE) $(MAKESILENT) -f hal/CMakeFiles/hal.dir/build.make hal/CMakeFiles/hal.dir/src/button.c.o
-.PHONY : src/button.c.o
-
-src/button.i: src/button.c.i
-.PHONY : src/button.i
-
-# target to preprocess a source file
-src/button.c.i:
-	cd /home/r1chmy0ungsun/ensc351/work/repo && $(MAKE) $(MAKESILENT) -f hal/CMakeFiles/hal.dir/build.make hal/CMakeFiles/hal.dir/src/button.c.i
-.PHONY : src/button.c.i
-
-src/button.s: src/button.c.s
-.PHONY : src/button.s
-
-# target to generate assembly for a file
-src/button.c.s:
-	cd /home/r1chmy0ungsun/ensc351/work/repo && $(MAKE) $(MAKESILENT) -f hal/CMakeFiles/hal.dir/build.make hal/CMakeFiles/hal.dir/src/button.c.s
-.PHONY : src/button.c.s
-
 src/joystick.o: src/joystick.c.o
 .PHONY : src/joystick.o
 
@@ -211,9 +187,6 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... hal"
-	@echo "... src/button.o"
-	@echo "... src/button.i"
-	@echo "... src/button.s"
 	@echo "... src/joystick.o"
 	@echo "... src/joystick.i"
 	@echo "... src/joystick.s"
