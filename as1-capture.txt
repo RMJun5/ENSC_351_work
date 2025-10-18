@@ -45,7 +45,7 @@ Last login: Sat Oct 18 00:52:52 2025 from 192.168.7.1
 -bash: /home/richardkim/reaction_timer: cannot execute binary file: Exec format error
 richardkim@rmk7-beagle:~$ ./reaction_timer
 -bash: ./reaction_timer: cannot execute binary file: Exec format error
-richardkim@rmk7-beagle:~$ echo "was unable to get it to execute despite compiling"
+richardkim@rmk7-beagle:~$ echo "was unable to get it to execute despite compiling with correct cmake kit of aarch64 "
 was unable to get it to execute despite compiling
 richardkim@rmk7-beagle:~$ ping host
 ^C
