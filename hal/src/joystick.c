@@ -13,7 +13,7 @@
 #include <errno.h>
 #include <math.h>
 
-joystick_t *joy_open(const char *dev, uint32_t speed_hz, int ch_X, int ch_Y) {
+joystick_t *joy_open(const char *dev, uint32_t speed_hz, int mode,int ch_X, int ch_Y) {
     joystick_t *joy = malloc(sizeof(joystick_t));
     if (!joy) {
         perror("malloc");
@@ -31,18 +31,18 @@ joystick_t *joy_open(const char *dev, uint32_t speed_hz, int ch_X, int ch_Y) {
     joy->down = ch_Y;
     joy->deadzone = 10; // default deadzone
     joy->direction = 0;  // default direction
-
-    return joy;
+    joy->mode = mode;
     if (ioctl(joy->fd, SPI_IOC_WR_MODE, &mode) == -1) {
-        perror("SPI_IOC_WR_MODE"); close(fd); return NULL;
+        perror("SPI_IOC_WR_MODE"); close(joy->fd); free(joy); return NULL;
     }
-    if (ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits) == -1) {
-        perror("SPI_IOC_WR_BITS_PER_WORD"); close(fd); return NULL;
+    if (ioctl(joy->fd, SPI_IOC_WR_BITS_PER_WORD, &bits) == -1) {
+        perror("SPI_IOC_WR_BITS_PER_WORD"); close(joy->fd); free(joy); return NULL;
     }
-    if (ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed_hz) == -1) {
-        perror("SPI_IOC_WR_MAX_SPEED_HZ"); close(fd); return NULL;
+    if (ioctl(joy->fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed_hz) == -1) {
+        perror("SPI_IOC_WR_MAX_SPEED_HZ"); close(joy->fd); free(joy); return NULL;
     }
     return joy;
+    
 }
 
 joystick_t *joy_read (int fd, int ch, uint32_t speed_hz){

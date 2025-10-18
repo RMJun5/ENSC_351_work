@@ -34,6 +34,7 @@ struct joystick {
     int down;
     int deadzone; // percent 0 to 100
     bool direction; // 0 = up, 1 = down
+    int mode;
     joy_calib_t calib;
 };
 /* Open joystick SPI device
@@ -42,7 +43,7 @@ struct joystick {
    ch: ADC channel numbers (0 or 1)
    Returns pointer to joystick_t on success, NULL on failure.
 */
-joystick_t *joy_open(const char *dev, uint32_t speed_hz, int ch_X, int ch_Y);
+joystick_t *joy_open(const char *dev, uint32_t speed_hz, int mode, int ch_X, int ch_Y);
 joystick_t *joy_read (int fd, int ch, uint32_t speed_hz);
 /* Start calibration: resets min/max to extreme/opposite values */
 void joy_calib_start(joystick_t *j);

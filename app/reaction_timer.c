@@ -35,6 +35,7 @@ printf("Calibration done. minX=%d maxX=%d centerX=%d\n", joy->calib.min_x, joy->
 }
 #endif /* JOY_CALIBRATION_ENABLED */
 
+
 int main(void){
 bool want_up = (rand() % 2) == 0; // randomly choose up or down 
 const char* dev = "/dev/spidev0.0";
@@ -44,8 +45,7 @@ uint8_t mode = 0;
 uint8_t bits = 8;
 uint32_t speed_hz = 250000;
    /* open joystick (channels 0 = X, 1 = Y) */
-    joystick_t *joy = joy_open(dev, speed_hz,
-                               ch0, ch1);
+    joystick_t *joy = joy_open(dev, speed_hz, mode, ch0, ch1);
     if (!joy) {
         perror("joy_open");
         return 1;
