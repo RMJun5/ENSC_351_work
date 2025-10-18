@@ -13,29 +13,19 @@
 #include <errno.h>
 #include <math.h>
 
-struct joystick { 
-    int fd;
-    uint32_t speed_hz;
-    int up;
-    int down;
-    int deadzone; // percent 0 to 100
-    bool direction; // 0 = up, 1 = down
-};
-
 joystick_t *joy_open(const char *dev, uint32_t speed_hz, int ch_X, int ch_Y) {
     joystick_t *joy = malloc(sizeof(joystick_t));
     if (!joy) {
         perror("malloc");
-        return 1;
+        return NULL;
     }
 
     joy->fd = open(dev, O_RDWR);
     if (joy->fd < 0) {
         perror(dev);
         free(joy);
-        return 1;
+        return NULL;
     }
-
     joy->speed_hz = speed_hz;
     joy->up = ch_X;
     joy->down = ch_Y;
@@ -44,15 +34,15 @@ joystick_t *joy_open(const char *dev, uint32_t speed_hz, int ch_X, int ch_Y) {
 
     return joy;
     if (ioctl(joy->fd, SPI_IOC_WR_MODE, &mode) == -1) {
-        perror("SPI_IOC_WR_MODE"); close(fd); return 1;
+        perror("SPI_IOC_WR_MODE"); close(fd); return NULL;
     }
     if (ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits) == -1) {
-        perror("SPI_IOC_WR_BITS_PER_WORD"); close(fd); return 1;
+        perror("SPI_IOC_WR_BITS_PER_WORD"); close(fd); return NULL;
     }
     if (ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed_hz) == -1) {
-        perror("SPI_IOC_WR_MAX_SPEED_HZ"); close(fd); return 1;
+        perror("SPI_IOC_WR_MAX_SPEED_HZ"); close(fd); return NULL;
     }
-    return fd;  
+    return joy;
 }
 
 joystick_t *joy_read (int fd, int ch, uint32_t speed_hz){

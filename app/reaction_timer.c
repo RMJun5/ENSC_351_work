@@ -38,25 +38,22 @@ printf("Calibration done. minX=%d maxX=%d centerX=%d\n", joy->calib.min_x, joy->
 int main(void){
 bool want_up = (rand() % 2) == 0; // randomly choose up or down 
 const char* dev = "/dev/spidev0.0";
-uint8_t mode = 0; // SPI mode 0
+uint8_t ch0 = 0;
+uint8_t ch1 = 1;
+uint8_t mode = 0;
 uint8_t bits = 8;
-uint32_t speed = 250000;
-    // open joystick device
-    int fd = joy_open(dev, speed, mode, bits);
-    if(fd<0) {
+uint32_t speed_hz = 250000;
+   /* open joystick (channels 0 = X, 1 = Y) */
+    joystick_t *joy = joy_open(dev, speed_hz,
+                               ch0, ch1);
+    if (!joy) {
         perror("joy_open");
         return 1;
     }
     //Say hello 
     printf("Hello embedded world, from Richard!");
     
-    /* open joystick (channels 0 = X, 1 = Y) */
-    joystick_t *joy = joy_open(JOY_DEFAULT_DEVICE, JOY_DEFAULT_SPEED_HZ,
-                               JOY_DEFAULT_AXIS_X, JOY_DEFAULT_AXIS_Y);
-    if (!joy) {
-        perror("joy_open");
-        return 1;
-    }
+ 
     const int THRESHOLD = 600;       /* raw units above center to be considered pressed — tune this */
     int best_ms = -1;
 
