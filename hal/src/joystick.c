@@ -69,7 +69,7 @@ joystick_t *joy_read (int fd, int ch, uint32_t speed_hz){
     };
 
     if (ioctl(fd, SPI_IOC_MESSAGE(1), &tr) < 1) return -1;
-    val =  ((rx[1] & 0x0F) << 8) | rx[2]; // 12-bit result
+    int val =  ((rx[1] & 0x0F) << 8) | rx[2]; // 12-bit result
     return val;
 }
 #define JOY_CALIBRATION_DISABLED
