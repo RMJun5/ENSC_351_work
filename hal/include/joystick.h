@@ -13,7 +13,17 @@
 /* Expected ADC resolution used by normalization (12 => 0..4095).
    Set to 10 if using a 10-bit ADC (0..1023). */
 #define JOY_ADC_BITS          12
-
+typedef struct {
+    int min_x;
+    int max_x;
+    int min_y;
+    int max_y;
+    int center_x;
+    int center_y;
+    int deadzone_pct;
+    double trigger_frac;
+    int calibrated;
+} joy_calib_t;
 /* Opaque joystick handle */
 typedef struct joystick joystick_t;
 
@@ -33,15 +43,7 @@ struct joystick {
    Returns pointer to joystick_t on success, NULL on failure.
 */
 joystick_t *joy_open(const char *dev, uint32_t speed_hz, int ch_X, int ch_Y);
-typedef struct {
-    int min_x, max_x;
-    int min_y, max_y;
-    int center_x, center_y;
-    int deadzone_pct;   /* e.g. 5 */
-    double trigger_frac;/* e.g. 0.8 = must move 80% towards end */
-    int calibrated;     /* 0 = not finalized, 1 = calibrated */
-} joy_calib_t;
-
+joystick_t *joy_read (int fd, int ch, uint32_t speed_hz);
 /* Start calibration: resets min/max to extreme/opposite values */
 void joy_calib_start(joystick_t *j);
 
