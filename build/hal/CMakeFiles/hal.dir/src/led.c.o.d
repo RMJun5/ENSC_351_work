@@ -2,6 +2,7 @@ hal/CMakeFiles/hal.dir/src/led.c.o: \
  /home/r1chmy0ungsun/ensc351/work/repo/hal/src/led.c \
  /usr/include/stdc-predef.h \
  /home/r1chmy0ungsun/ensc351/work/repo/hal/include/led.h \
+ /home/r1chmy0ungsun/ensc351/work/repo/hal/include/timing.h \
  /usr/include/stdio.h \
  /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
  /usr/include/features.h /usr/include/features-time64.h \
@@ -27,7 +28,8 @@ hal/CMakeFiles/hal.dir/src/led.c.o: \
  /usr/include/x86_64-linux-gnu/bits/floatn-common.h /usr/include/stdlib.h \
  /usr/include/x86_64-linux-gnu/bits/waitflags.h \
  /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
- /usr/include/x86_64-linux-gnu/bits/stdlib-float.h /usr/include/time.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+ /usr/lib/gcc/x86_64-linux-gnu/14/include/stdbool.h /usr/include/time.h \
  /usr/include/x86_64-linux-gnu/bits/time.h \
  /usr/include/x86_64-linux-gnu/bits/types/clock_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/time_t.h \

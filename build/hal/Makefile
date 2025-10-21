@@ -178,6 +178,30 @@ src/led.c.s:
 	cd /home/r1chmy0ungsun/ensc351/work/repo/build && $(MAKE) $(MAKESILENT) -f hal/CMakeFiles/hal.dir/build.make hal/CMakeFiles/hal.dir/src/led.c.s
 .PHONY : src/led.c.s
 
+src/timing.o: src/timing.c.o
+.PHONY : src/timing.o
+
+# target to build an object file
+src/timing.c.o:
+	cd /home/r1chmy0ungsun/ensc351/work/repo/build && $(MAKE) $(MAKESILENT) -f hal/CMakeFiles/hal.dir/build.make hal/CMakeFiles/hal.dir/src/timing.c.o
+.PHONY : src/timing.c.o
+
+src/timing.i: src/timing.c.i
+.PHONY : src/timing.i
+
+# target to preprocess a source file
+src/timing.c.i:
+	cd /home/r1chmy0ungsun/ensc351/work/repo/build && $(MAKE) $(MAKESILENT) -f hal/CMakeFiles/hal.dir/build.make hal/CMakeFiles/hal.dir/src/timing.c.i
+.PHONY : src/timing.c.i
+
+src/timing.s: src/timing.c.s
+.PHONY : src/timing.s
+
+# target to generate assembly for a file
+src/timing.c.s:
+	cd /home/r1chmy0ungsun/ensc351/work/repo/build && $(MAKE) $(MAKESILENT) -f hal/CMakeFiles/hal.dir/build.make hal/CMakeFiles/hal.dir/src/timing.c.s
+.PHONY : src/timing.c.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -193,6 +217,9 @@ help:
 	@echo "... src/led.o"
 	@echo "... src/led.i"
 	@echo "... src/led.s"
+	@echo "... src/timing.o"
+	@echo "... src/timing.i"
+	@echo "... src/timing.s"
 .PHONY : help
 
 

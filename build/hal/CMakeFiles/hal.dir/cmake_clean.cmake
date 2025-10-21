@@ -3,6 +3,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/hal.dir/src/joystick.c.o.d"
   "CMakeFiles/hal.dir/src/led.c.o"
   "CMakeFiles/hal.dir/src/led.c.o.d"
+  "CMakeFiles/hal.dir/src/timing.c.o"
+  "CMakeFiles/hal.dir/src/timing.c.o.d"
   "libhal.a"
   "libhal.pdb"
 )

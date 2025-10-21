@@ -10,6 +10,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/r1chmy0ungsun/ensc351/work/repo/hal/src/joystick.c" "hal/CMakeFiles/hal.dir/src/joystick.c.o" "gcc" "hal/CMakeFiles/hal.dir/src/joystick.c.o.d"
   "/home/r1chmy0ungsun/ensc351/work/repo/hal/src/led.c" "hal/CMakeFiles/hal.dir/src/led.c.o" "gcc" "hal/CMakeFiles/hal.dir/src/led.c.o.d"
+  "/home/r1chmy0ungsun/ensc351/work/repo/hal/src/timing.c" "hal/CMakeFiles/hal.dir/src/timing.c.o" "gcc" "hal/CMakeFiles/hal.dir/src/timing.c.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

@@ -1,8 +1,0 @@
-/home/r1chmy0ungsun/ensc351/work/repo/CMakeFiles/edit_cache.dir
-/home/r1chmy0ungsun/ensc351/work/repo/CMakeFiles/rebuild_cache.dir
-/home/r1chmy0ungsun/ensc351/work/repo/hal/CMakeFiles/hal.dir
-/home/r1chmy0ungsun/ensc351/work/repo/hal/CMakeFiles/edit_cache.dir
-/home/r1chmy0ungsun/ensc351/work/repo/hal/CMakeFiles/rebuild_cache.dir
-/home/r1chmy0ungsun/ensc351/work/repo/app/CMakeFiles/reaction_timer.dir
-/home/r1chmy0ungsun/ensc351/work/repo/app/CMakeFiles/edit_cache.dir
-/home/r1chmy0ungsun/ensc351/work/repo/app/CMakeFiles/rebuild_cache.dir

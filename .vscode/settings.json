@@ -1,10 +1,7 @@
 {
     "files.associations": {
-        "string.h": "c",
-        "math.h": "c",
-        "errno.h": "c",
-        "reaction_timer.h": "c",
-        "joystick.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "stdlib.h": "c",
+        "stdbool.h": "c"
     }
 }

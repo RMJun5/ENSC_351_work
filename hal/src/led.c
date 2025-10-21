@@ -5,6 +5,7 @@
 #define R_brightness_path "/sys/class/leds/PWR/brightness"
 #define _POSIX_C_SOURCE 200809L
 #include "led.h"
+#include "timing.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -71,3 +72,4 @@ int r_set_act_on(int on) {
         
         return 0;
 }
+
