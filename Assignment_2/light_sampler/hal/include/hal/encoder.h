@@ -8,10 +8,10 @@
 
 // Use the rotary encoder to control how fast the LED blinks (using PWM).
 // This LED emitter is designed to flash directly at the “detector” light sensor.
-read_encoder();
+int read_encoder(void);
 
 // Set the speed of the LED emitter using the rotary encoder.
-set_blink_speed();
+void set_blink_speed(int speed);
 
 
 #endif
