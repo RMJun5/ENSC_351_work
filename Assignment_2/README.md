@@ -1,3 +1,18 @@
+# ENSC 351 Assignment 2: LED dipper
+
+Authors: 
+  Richard Kim
+  Kirstin Horvat, 301579693
+
+## Description:
+
+This is a simple program that lets you control a LED dipper using a potentiometer.
+The potentiometer controls the brightness of the LED, and the LED is connected to the GPIO pins of the BeagleY-AI.
+
+
+
+<!-- >
+
 # CMPT 433 Sample Assignment Build Structure
 
 This is a working project that you can use as the basis for your assignments.
@@ -57,9 +72,14 @@ Note: This application is just to help you get started! It also has a bug in its
 
 ## Suggested addons
 
+
+
 - "CMake Tools" automatically suggested when you open a `CMakeLists.txt` file
-- "Output Colourizer" by IBM 
-    --> Adds colour to the OUTPUT panel in VS Code; useful for seeing CMake messages
+- "Output Colourizer" by IBM  
+    
+<!-->
+<!-->
+Adds colour to the OUTPUT panel in VS Code; useful for seeing CMake messages
 
 ## Other Suggestions
 
