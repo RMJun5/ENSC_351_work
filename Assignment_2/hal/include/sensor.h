@@ -65,7 +65,7 @@
  * 
  * **********************
  * 
- *
+ * This link might be useful: https://docs.beagleboard.org/boards/beagley/ai/demos/using-pwm.html
  * 
  * 
  * 
@@ -74,6 +74,8 @@
 
 #ifndef SENSOR_H
 #define SENSOR_H
+
+#include "hardware/pwm.h"
 
 // Use the light sensor to read current light level.
 read_sensor();
