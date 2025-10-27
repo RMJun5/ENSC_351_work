@@ -35,7 +35,7 @@ void tradeArrays(double *array1, double *array2, int size)
  */
 void displayArrays(double *source, double *target, int size)
 {
-	unsigned int i;
+	int i; // removed the unsigned
 	for (i=0; i < size; i++) {
 		printf("%3d: %05.1f --> %05.1f\n", i, source[i], target[i]);
 	}

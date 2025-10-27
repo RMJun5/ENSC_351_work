@@ -9,16 +9,16 @@
  * 
  * 1. $ sudo nano /boot/firmware/extlinux/extlinux.conf    # load the correct driver
  * 
- * 2. In the file, enable PWM on GPIO12 (LED Emitter) = HAT pin32
+ * 2. In the file, enable PWM on GPIO12 (LED Emitter) = HAT pin32 (Without bricking!)
  * 
  *      label microSD (default)
  *      kernel /Image
  *      append console=ttyS2,115200n8 root=/dev/mmcblk1p3 ro ... <trimmed>
  *      fdtdir /
  *      fdt /ti/k3-am67a-beagley-ai.dtb
+ *      fdtoverlays /overlays/k3-am67a-beagley-ai-spidev0.dtbo,
  *      fdtoverlays /overlays/k3-am67a-beagley-ai-pwm-epwm0-gpio12.dtbo     # Add this
- *      initrd /initrd.img                                                  # Add this
- * 
+ *      #initrd /initrd.img                                                 
  * 
  * 3. Reboot the board. After every reboot, you must run this (add to the setup.sh in BYAI):
  * 
@@ -67,21 +67,61 @@
  * 
  * This link might be useful: https://docs.beagleboard.org/boards/beagley/ai/demos/using-pwm.html
  * 
- * 
+ * **********************
+ * wiring the sensor (from chatGPT cause I cant wire for shit)
+ *
+ *
+ * 3.3V ---/\/\/\---+---/\/\/\--- GND
+ *         Sensor   |    10kΩ
+ *                  |
+ *               ADC CH0 *
  * 
  */
 
 
-#ifndef SENSOR_H
-#define SENSOR_H
 
-#include "hardware/pwm.h"
+#ifndef _SENSOR_H_
+#define _SENSOR_H_
+
+#include <pthread.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdbool.h>
+#include <sys/ioctl.h>
+#include <linux/spi/spidev.h>
+
+
 
 // Use the light sensor to read current light level.
-read_sensor();
 
-// Compute and print out the number of dips in the light intensity seen in the previous second
-number_of_dips();
+// Setup light
+void sensor_init();
+
+// Clean up thread
+void sensor_cleanup();
+
+// Must be called once every 1s.
+// Moves the samples that it has been collecting this second into
+// the history, which makes the samples available for reads (below).
+void moveCurrentDataToHistory();
+
+// Get the number of samples collected during the previous complete second.
+int getHistorySize();
+
+// Get a copy of the samples in the sample history.
+// Returns a newly allocated array and sets `size` to be the
+// number of elements in the returned array (output-only parameter).
+// The calling code must call free() on the returned pointer.
+// Note: It provides both data and size to ensure consistency.
+double* getHistory(int* size);
+
+// Get the average light level (not tied to the history)
+double getAverageReading();
+
+// Get the total number of light level samples taken so far.
+long long getNumSamplesTaken();
 
 
 
