@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L 
 #include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -31,7 +32,32 @@ static void updateStats(
     Period_statistics_t *pStats
 );
 static long long getTimeInNanoS(void);
+static double nanotoms(int ns);
+long long getTimeInMs(void);
+void sleep_ms(long long ms);
 
+double nanotoms (int ns){
+    double ms = (double)ns / 1000000.0;
+    return ms;
+}
+long long getTimeInMs(void) {
+    struct timespec spec;
+    clock_gettime(CLOCK_REALTIME, &spec);
+    long long seconds = (long long)spec.tv_sec;
+    long long nanoSeconds = (long long)spec.tv_nsec;
+    long long milliSeconds = seconds * 1000LL + nanoSeconds / 1000000LL;
+    return milliSeconds;
+}
+void sleep_ms(long long ms){
+    const long long NS_PER_MS = 1000 * 1000;
+    const long long NS_PER_SECOND = 1000000000;
+    
+    long long delayNs = ms * NS_PER_MS;
+    int seconds = (int)(delayNs / NS_PER_SECOND);
+    int nanoseconds = (int)(delayNs % NS_PER_SECOND);
+    struct timespec reqDelay = { .tv_sec = seconds, .tv_nsec = nanoseconds };
+    nanosleep(&reqDelay,(struct timespec *)NULL);
+}
 
 void Period_init(void)
 {

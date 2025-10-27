@@ -1,7 +1,7 @@
 #include "hal/sensor.h"
-#include "hal/timing.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdatomic.h>
 
 //configurable parameters
 #define SAMPLE_MS            1                       // 1 ms between samples
@@ -16,8 +16,6 @@
 #define DEV_MODE 0
 #define DEV_BITS 8
 #define DEV_SPEED 250000
-
-int fd = open(DEV_PATH, O_RDWR);
 
 int CH0; // light sensor
 
@@ -100,10 +98,14 @@ static int read_adc_ch(int fd, int ch, uint32_t speed_hz) {
 
 //read light sensor raw adc values
 int sensor_read() {
+    int fd = open(DEV_PATH, O_RDWR);
+     uint8_t mode = DEV_MODE;
+    uint8_t bits = DEV_BITS;
+    uint32_t speed_hz = DEV_SPEED;
     if (fd < 0) { perror("opendd"); return 1;}
-    if (ioctl(fd, SPI_IOC_WR_MODE, &DEV_MODE) == -1) { perror("mode"); return 1;}
-    if (ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &DEV_BITS) == -1) { perror("bpw"); return 1;}
-    if (ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &DEV_SPEED) == -1) { perror("speed"); return 1;}
+    if (ioctl(fd, SPI_IOC_WR_MODE, &mode) == -1) { perror("mode"); return 1;}
+    if (ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits) == -1) { perror("bpw"); return 1;}
+    if (ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed) == -1) { perror("speed"); return 1;}
 
     // read channel 0 (connected to light sensor)
     CH0 = read_adc_ch(fd, 0, DEV_SPEED);
@@ -113,6 +115,7 @@ int sensor_read() {
 }
 void sensor_cleanup() {
     // Clean up device
+    int fd = open(DEV_PATH, O_RDWR);
     if (fd >= 0) {
         close(fd);
         fd = -1;
