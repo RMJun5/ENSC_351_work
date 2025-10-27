@@ -19,6 +19,7 @@ int main() {
         return 1;
     }
     int n = 0;
+    getHistorySize();
 
     // Read the light sensor
     while(n < 10) {

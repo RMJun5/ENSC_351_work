@@ -17,6 +17,7 @@
 #define DEV_BITS 8
 #define DEV_SPEED 250000
 
+Period_statistics_t stats = {0};
 int CH0; // light sensor
 
 const char* dev;
@@ -102,16 +103,23 @@ int sensor_read() {
      uint8_t mode = DEV_MODE;
     uint8_t bits = DEV_BITS;
     uint32_t speed_hz = DEV_SPEED;
-    if (fd < 0) { perror("opendd"); return 1;}
+    if (fd < 0) { perror("open"); return 1;}
     if (ioctl(fd, SPI_IOC_WR_MODE, &mode) == -1) { perror("mode"); return 1;}
     if (ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits) == -1) { perror("bpw"); return 1;}
     if (ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed) == -1) { perror("speed"); return 1;}
-
+    Period_markEvent(PERIOD_EVENT_SAMPLE_LIGHT);
+    Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_LIGHT, &stats);
+    printf("Light sensor statistics:\n");
+    printf("  Num samples: %d\n", stats.numSamples);
+    printf("  Min period (ms): %.3f\n", stats.minPeriodInMs);
+    printf("  Max period (ms): %.3f\n", stats.maxPeriodInMs);
+    printf("  Avg period (ms): %.3f\n", stats.avgPeriodInMs);
     // read channel 0 (connected to light sensor)
     CH0 = read_adc_ch(fd, 0, DEV_SPEED);
     printf("CH0=%d\n", CH0);
     return CH0;
     sensor_cleanup();
+ 
 }
 void sensor_cleanup() {
     // Clean up device
@@ -120,6 +128,7 @@ void sensor_cleanup() {
         close(fd);
         fd = -1;
     }
+    Period_cleanup();
 }
 int getHistorySize() {
     // read from history.txt and return the number of lines
@@ -128,7 +137,8 @@ int getHistorySize() {
         perror("Error opening file");
         return -1;
     }
-    long long t_size = thread_read_size();
+    int ch =sensor_read();
+
     fclose(fileID);
     return (int)t_size;
 }
