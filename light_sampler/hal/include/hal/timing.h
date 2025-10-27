@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-int nanotoms (int ns);
+double nanotoms (int ns);
 
 
 long long getTimeInMs(void);

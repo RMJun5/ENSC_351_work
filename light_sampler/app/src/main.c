@@ -1,5 +1,7 @@
 
 #include "hal/sensor.h" 
+#include "hal/timing.h"
+#include <stdio.h>
 #include <string.h>
 
 
@@ -21,7 +23,7 @@ int main() {
     // Read the light sensor
     while(n < 10) {
         fprintf(fileID, "%d\n", sensor_read());
-        nanosleep(&reqDelay, NULL);
+        nanosleep(nanotoms(&reqDelay), NULL);
         n++;
     }
 

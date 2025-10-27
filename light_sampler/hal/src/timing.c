@@ -5,8 +5,8 @@
 #include <time.h>
 #include "hal/timing.h"
 
-int nanotoms (int ns){
-    int ms = ns*(0xa^6);
+double nanotoms (int ns){
+    double ms = (double)ns / 1000000.0;
     return ms;
 }
 

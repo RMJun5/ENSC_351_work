@@ -123,7 +123,7 @@ double getAverageReading();
 // Get the total number of light level samples taken so far.
 long long getNumSamplesTaken();
 
-
+void* sensor_sum_runner (void* arg);
 
 
 #endif

@@ -1,5 +1,8 @@
 {
     "files.associations": {
-        "stdint.h": "c"
-    }
+        "stdint.h": "c",
+        "sensor.h": "c",
+        "stdio.h": "c"
+    },
+    "cmake.sourceDirectory": "C:/Users/richa/OneDrive/Documents/GitHub/ENSC_351_work/Assignment_1"
 }
