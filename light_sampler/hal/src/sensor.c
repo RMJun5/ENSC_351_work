@@ -34,7 +34,7 @@ static int read_adc_ch(int fd, int ch, uint32_t speed_hz) {
     return ((rx[1] & 0x0F) << 8) | rx[2];
 }
 
-void sensor_init() {
+int sensor_read() {
     dev = "/dev/spidev0.0";
     mode = 0;
     bits = 8;
@@ -42,13 +42,14 @@ void sensor_init() {
 
     int fd = open(dev, O_RDWR);
 
-    if (fd < 0) { perror("opendd"); return;}
-    if (ioctl(fd, SPI_IOC_WR_MODE, &mode) == -1) { perror("mode"); return;}
-    if (ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits) == -1) { perror("bpw"); return;}
-    if (ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed) == -1) { perror("speed"); return;}
+    if (fd < 0) { perror("opendd"); return 1;}
+    if (ioctl(fd, SPI_IOC_WR_MODE, &mode) == -1) { perror("mode"); return 1;}
+    if (ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits) == -1) { perror("bpw"); return 1;}
+    if (ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed) == -1) { perror("speed"); return 1;}
 
     CH0 = read_adc_ch(fd, 0, speed);
 
     printf("CH0=%d\n", CH0);
+    return CH0;
     close(fd);
 }

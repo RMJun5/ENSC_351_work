@@ -97,7 +97,7 @@
 // Use the light sensor to read current light level.
 
 // Setup light
-void sensor_init();
+int sensor_read();
 
 // Clean up thread
 void sensor_cleanup();
