@@ -78,8 +78,6 @@
  * 
  */
 
-
-
 #ifndef _SENSOR_H_
 #define _SENSOR_H_
 
@@ -91,8 +89,6 @@
 #include <stdbool.h>
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
-
-
 
 // Use the light sensor to read current light level.
 
@@ -122,8 +118,5 @@ double getAverageReading();
 
 // Get the total number of light level samples taken so far.
 long long getNumSamplesTaken();
-
-
-
 
 #endif

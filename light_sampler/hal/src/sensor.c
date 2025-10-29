@@ -1,4 +1,8 @@
 #include "hal/sensor.h"
+#include <stdlib.h>
+
+#define HISTORY_FILE "history.txt"
+#define HISTORY_SIZE 0
 
 int CH0; // light sensor
 
@@ -50,4 +54,63 @@ int sensor_read() {
     printf("CH0=%d\n", CH0);
     return CH0;
     close(fd);
+}
+
+int getHistorySize() {
+    int numberOfLines;
+    int ch;
+
+    FILE* fileID = fopen(HISTORY_FILE, "r");
+    if (fileID == NULL) {
+        perror("Error opening file");
+        return -1;
+    }
+    
+    while ((ch = fgetc(fileID)) != EOF) {
+        if (ch == '\n') {numberOfLines++;}
+    }
+    fclose(fileID);
+    return numberOfLines;
+}
+
+double* getHistory(int* size) {
+    int t_size = getHistorySize
+
+    // read from history.txt and return the number of lines
+    FILE* fileID = fopen(HISTORY_FILE, "r");
+    if (fileID == NULL) {
+        perror("Error opening file");
+        return -1;
+    }
+    
+    double* history = (double*) malloc(t_size * sizeof(double));
+    if (history == NULL) {
+        perror("Error allocating memory for history");
+        return NULL;
+    }
+    char line[256];
+    int index = 0;
+    while (fgets(line, sizeof(line), fileID)) {
+        history[index] = atof(line);
+        index++;
+    }
+    fclose(fileID);
+    *size = index;
+    return history;
+}
+
+// Get the average light level (not tied to the history)
+double getAverageReading (){
+    int size = getHistorySize();
+
+    int total = 0;
+    FILE* fileID = fopen(HISTORY_FILE, "r");
+    if (fileID == NULL) {
+        perror("Error opening file");
+        return -1;
+    }
+    fclose(fileID);
+    if (size == 0) return 0.0;
+    double average = (double)total / size;
+    return average;
 }
