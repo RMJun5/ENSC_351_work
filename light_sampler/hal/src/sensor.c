@@ -1,4 +1,3 @@
-
 #include "hal/sensor.h"
 
 int CH0; // light sensor
@@ -7,7 +6,6 @@ const char* dev;
 uint8_t mode;
 uint8_t bits;
 uint32_t speed; 
-
 
 static int read_adc_ch(int fd, int ch, uint32_t speed_hz) {
 

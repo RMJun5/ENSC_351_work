@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "periodTimer.h"
 
@@ -19,6 +20,7 @@ typedef struct {
     // Used for recording the event between analysis periods.
     long long prevTimestampInNs;
 } timestamps_t;
+
 static timestamps_t s_eventData[NUM_PERIOD_EVENTS];
 
 static pthread_mutex_t s_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -26,26 +28,26 @@ static bool s_initialized = false;
 
 
 // Prototypes
-static void updateStats(
-    timestamps_t *pData, 
-    Period_statistics_t *pStats
-);
+static void updateStats(timestamps_t *pData, Period_statistics_t *pStats);
 static long long getTimeInNanoS(void);
 
 
-void Period_init(void)
-{
+void Period_init(void) {
+    
     memset(s_eventData, 0, sizeof(s_eventData[0]) * NUM_PERIOD_EVENTS);
     s_initialized = true;
-}
-void Period_cleanup(void)
-{
-    // nothing
-    s_initialized = false;
+
 }
 
-void Period_markEvent(enum Period_whichEvent whichEvent)
-{
+void Period_cleanup(void) {
+
+    // nothing
+    s_initialized = false;
+
+}
+
+void Period_markEvent(enum Period_whichEvent whichEvent) {
+    
     assert (whichEvent >= 0 && whichEvent < NUM_PERIOD_EVENTS);
     assert (s_initialized);
 
@@ -62,11 +64,8 @@ void Period_markEvent(enum Period_whichEvent whichEvent)
     pthread_mutex_unlock(&s_lock);
 }
 
-void Period_getStatisticsAndClear(
-    enum Period_whichEvent whichEvent,
-    Period_statistics_t *pStats
-)
-{
+void Period_getStatisticsAndClear(enum Period_whichEvent whichEvent, Period_statistics_t *pStats) {
+    
     assert (whichEvent >= 0 && whichEvent < NUM_PERIOD_EVENTS);
     assert (s_initialized);
     timestamps_t *pData = &s_eventData[whichEvent];
@@ -86,11 +85,9 @@ void Period_getStatisticsAndClear(
     pthread_mutex_unlock(&s_lock);
 }
 
-static void updateStats(
-    timestamps_t *pData, 
-    Period_statistics_t *pStats
-)
-{
+static void updateStats(timestamps_t *pData, Period_statistics_t *pStats) {
+
+ 
     long long prevInNs = pData->prevTimestampInNs;
 
     // Handle startup (no previous sample)
@@ -130,13 +127,9 @@ static void updateStats(
     pStats->numSamples = pData->timestampCount;
 }
 
-
-
-
-
 // Timing function
-static long long getTimeInNanoS(void) 
-{
+static long long getTimeInNanoS(void) {
+
     struct timespec spec;
     clock_gettime(CLOCK_BOOTTIME, &spec);
     long long seconds = spec.tv_sec;
