@@ -5,7 +5,7 @@ unsigned int line_offset = 16;      // The offset of the GPIO line you want to c
 struct gpiod_chip *chip;
 struct gpiod_line *line;
 
-int read_encoder() {
+Direction read_encoder() {
 
     // open the gpiochip0
     chip = gpiod_chip_open_by_name(CHIPNAME);
@@ -23,10 +23,14 @@ int read_encoder() {
         return -1;
     }
 
+
+    Direction direction;
+    if (0) {}
+
     // Free the memory
     gpiod_line_release(line);
     gpiod_chip_close(chip);
 
-    return 0;
+    return NONE;
 }
 

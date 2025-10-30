@@ -88,6 +88,7 @@ double* getHistory(int* size) {
         perror("Error allocating memory for history");
         return NULL;
     }
+    
     char line[256];
     int index = 0;
     while (fgets(line, sizeof(line), fileID)) {
@@ -109,6 +110,7 @@ double getAverageReading (){
         perror("Error opening file");
         return -1;
     }
+    
     fclose(fileID);
     if (size == 0) return 0.0;
     double average = (double)total / size;

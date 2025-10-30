@@ -44,10 +44,16 @@ int main() {
 
         Period_markEvent(PERIOD_EVENT_SAMPLE_LIGHT);
         // Read the light sensor
-        fprintf(fileID, "%d\n", sensor_read());
+        fprintf(fileID, "%d, ", sensor_read());
         sleep((unsigned)0.1);   
 
     }
+    printf("Light sensor thread statistics:\n");
+    printf("  Num samples: %d\n", stats.numSamples);
+    printf("  Min period (ms): %.3f\n", stats.minPeriodInMs);
+    printf("  Max period (ms): %.3f\n", stats.maxPeriodInMs);
+    printf("  Avg period (ms): %.3f\n", stats.avgPeriodInMs);
+
     Period_markEvent(PERIOD_EVENT_MARK_SECOND);
     Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_LIGHT, &stats);
     Period_cleanup();
