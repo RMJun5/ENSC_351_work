@@ -25,53 +25,6 @@ uint8_t mode;
 uint8_t bits;
 uint32_t speed;
 
-// thread variables
-// thread sum variable
-// bool thread_running = false;
-static atomic_bool thread_running = false;
-//size of readings
-long long size = 0;
-// thread limit variable (unsure if what limit should be)
-long long limit = 10000000; // 10 million
-//Thread ID
-static pthread_t sampler_tid;
-//Thread attributes
-pthread_attr_t attr;
-// Thread function to generate sum of readings 
-void* sensor_size_runner (void* arg) 
-{
-    if (!thread_running) {
-        thread_running = true;
-    }
-    long long *limitptr = (long long*) arg;
-    long long limit = *limitptr;
-
-    long long size = 0;
-    for (long long i = 0; i < limit; i++) {
-        size += i;
-    }
-    //What to do with sum?
-
-}
-long long thread_read_size() {
-
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-    //Create thread to compute sum
-    pthread_create(&sampler_tid, &attr, sensor_size_runner, (void*)&limit);
-    //Wait for thread to finish
-    pthread_join(sampler_tid, NULL);
-    //Sum of readings from 0 to limit-1
-    printf("Sum from 0 to %lld = %lld\n", limit-1, size);
-    return size;
-}
-void thread_cleanup(void* arg) {
-     //Cleanup   
-    pthread_attr_destroy(&attr);
-    pthread_cancel(sampler_tid);
-    pthread_exit(NULL);
-}
-
 static int read_adc_ch(int fd, int ch, uint32_t speed_hz) {
 
     uint8_t tx[3] = {   (uint8_t)(0x006 | ((ch & 0x04) >> 2)),
@@ -118,8 +71,7 @@ int sensor_read() {
     CH0 = read_adc_ch(fd, 0, DEV_SPEED);
     printf("CH0=%d\n", CH0);
     return CH0;
-    sensor_cleanup();
- 
+    sensor_cleanup(); 
 }
 void sensor_cleanup() {
     // Clean up device
@@ -130,6 +82,17 @@ void sensor_cleanup() {
     }
     Period_cleanup();
 }
+
+void moveCurrentDataToHistory(){
+    fileID = fopen(HISTORY_FILE, "a");
+    if (fileID == NULL) {
+        perror("Error opening file for appending");
+        return;
+    }
+    fprintf(fileID, "%d\n", CH0);
+    fclose(fileID);
+}
+
 int getHistorySize() {
     // read from history.txt and return the number of lines
     FILE* fileID = fopen(HISTORY_FILE, "r");
@@ -137,8 +100,8 @@ int getHistorySize() {
         perror("Error opening file");
         return -1;
     }
-    int ch =sensor_read();
-
+    getPeriodStatisticsAndClear(NUM_PERIOD_EVENTS, &stats);
+    long long t_size = (long long) stats.numSamples;
     fclose(fileID);
     return (int)t_size;
 }
@@ -175,7 +138,8 @@ double getAverageReading (){
         perror("Error opening file");
         return -1;
     }
-    size = thread_read_size();
+    Period_getStatisticsAndClear(NUM_PERIOD_EVENTS, &stats);
+    int size = stats.numSamples;
     fclose(fileID);
     if (size == 0) return 0.0;
     double average = (double)total / size;
