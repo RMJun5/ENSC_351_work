@@ -99,6 +99,11 @@
 #define DEV_MODE 0
 #define DEV_BITS 8
 #define DEV_SPEED 250000
+#define MAX_SAMPLESPERSECOND 1000
+#define MAX_ADCVALUE 4095.0   
+#define MAX_VOLTAGE 3.3       // Maximum voltage corresponding to ADC full scale 
+#define MAX_SAMPLE_SIZE (MAX_SAMPLES_PER_SECOND + 0.1*MAX_SAMPLES_PER_SECOND) // buffer for 10% overhead
+
 // Use the light sensor to read current light level.
 
 // Setup light

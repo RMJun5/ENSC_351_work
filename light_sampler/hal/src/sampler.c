@@ -1,4 +1,4 @@
-#include "hal/sensor.h"
+#include "hal/sampler.h"
 #include "hal/led.h"
 
 #include "periodTimer.h"
@@ -8,7 +8,7 @@
 #include <pthread.h>
 #include <stdatomic.h>
 
-static pthread_t samplerThreadID;
+static pthread_t samplerID;
 static double *currSamples = NULL;
 static int currSize = 0;
 
@@ -24,7 +24,7 @@ static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 Period_statistics_t stats = {0};
 static bool samplerInitialized = false;
-
+static bool go = false;
 
 //read light sensor raw adc values
 void sampler_init() {
@@ -33,11 +33,15 @@ void sampler_init() {
         return;
     }   
     samplerInitialized = true;
+    go =true;
+    Period_init();
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-
-    pthread_create(&samplerThreadID, &attr);
-    pthread_mutex_unlock(&lock);
+    currSamples = malloc(sizeof(double)* MAX_SAMPLESPERSECOND);
+    if (!currSamples){
+        stderr()
+    }
+    pthread_create(&samplerID, &attr);
 }
 
 void sampler_cleanup() {
@@ -48,6 +52,12 @@ void sampler_cleanup() {
     }
     samplerInitialized = false;
     pthread_mutex_lock(&lock);
+    free(currSamples);
+    free(histSamples);
+    currSamples= histSamples =NULL;
+    currSize = histSize = 0;
+    pthread_mutex_unlock(&lock);
+
     pthread_exit(0);
 }
 
