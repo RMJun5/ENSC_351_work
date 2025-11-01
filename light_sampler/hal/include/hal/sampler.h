@@ -94,34 +94,40 @@
 
 
 
+// Device parameters
+#define DEV_PATH "/dev/spidev0.0"
+#define DEV_MODE 0
+#define DEV_BITS 8
+#define DEV_SPEED 250000
 // Use the light sensor to read current light level.
 
 // Setup light
-int sensor_read();
+void sampler_init();
 
 // Clean up thread
-void sensor_cleanup();
+void sampler_cleanup();
 
 // Must be called once every 1s.
 // Moves the samples that it has been collecting this second into
 // the history, which makes the samples available for reads (below).
-void moveCurrentDataToHistory();
+void sampler_moveCurrentDataToHistory();
 
 // Get the number of samples collected during the previous complete second.
-int getHistorySize();
+int sampler_getHistorySize();
 
 // Get a copy of the samples in the sample history.
 // Returns a newly allocated array and sets `size` to be the
 // number of elements in the returned array (output-only parameter).
 // The calling code must call free() on the returned pointer.
 // Note: It provides both data and size to ensure consistency.
-double* getHistory(int* size);
+double* sampler_getHistory(int* size);
 
 // Get the average light level (not tied to the history)
-double getAverageReading();
+double sampler_getAverageReading();
 
 // Get the total number of light level samples taken so far.
-long long getNumSamplesTaken();
+long long sampler_getNumSamplesTaken();
 
+void* samplerThread(void* arg);
 
 #endif
