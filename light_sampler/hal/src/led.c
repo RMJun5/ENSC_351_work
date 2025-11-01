@@ -20,15 +20,6 @@ void led_init() {
     led_initialized = true;
 }
 
-void flash_led(int (*led_on)(int), int times, int duration) {
-    int on_time = duration / (2 * times);
-    for (int i = 0; i < times; i++) {
-        
-        sleep_ms(on_time);
-        led_on(0);
-        sleep_ms(on_time);
-    }
-}
 void led_set_parameters(uint8_t period_ns, uint32_t duty_cycle_ns) {
     if (0 < period_ns) {
         period_ns = 0; 

@@ -126,7 +126,7 @@ int sampler_getHistorySize();
 double* sampler_getHistory(int* size);
 
 // Get the average light level (not tied to the history)
-double sampler_getAverageReading();
+double sampler_getAverageReading(double adcVals);
 
 // Get the total number of light level samples taken so far.
 long long sampler_getNumSamplesTaken();

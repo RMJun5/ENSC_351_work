@@ -6,7 +6,9 @@
         "fcntl.h": "c",
         "led.h": "c",
         "stdlib.h": "c",
-        "help.h": "c"
+        "help.h": "c",
+        "stdbool.h": "c",
+        "string.h": "c"
     },
     "cmake.sourceDirectory": "C:/Users/richa/OneDrive/Documents/GitHub/ENSC_351_work/Assignment_1"
 }
