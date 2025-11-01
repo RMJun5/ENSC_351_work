@@ -48,9 +48,6 @@ void Period_markEvent(enum Period_whichEvent whichEvent);
 // This function is threadsafe, and may be called by any thread.
 // Calling this function will, after it computes the timing
 // statistics, clear the data stored for this event.
-void Period_getStatisticsAndClear(
-    enum Period_whichEvent whichEvent,
-    Period_statistics_t *pStats
-);
+void Period_getStatisticsAndClear(enum Period_whichEvent whichEvent, Period_statistics_t *pStats);
 
 #endif
