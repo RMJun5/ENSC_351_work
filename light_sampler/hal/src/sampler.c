@@ -1,3 +1,4 @@
+
 #include "hal/sampler.h"
 #include "hal/led.h"
 #include "periodTimer.h"
@@ -10,66 +11,82 @@
 #include <pthread.h>
 #include <stdatomic.h>
 
-static int samplerCH = 0;
-static pthread_t samplerTID;
-static double *currSamples = NULL;
-static int currSize = 0;
+/*
+ * Lightweight sampling module (internal names changed for clarity):
+ * - keeps a rolling samples of the most recent second of ADC samples
+ * - archives the just-completed samples into a history snapshot
+ * - maintains an exponential moving average of readings
+ */
 
-static double *histSamples = NULL;
-static int histSize = 0;
+static int adc_channel = 0;
+static pthread_t thread_id;
+static double *current_samples = NULL;   // newest samples (up to 1 second)
+static int current_size = 0;
 
-// Stats
-static double Alpha = 0.999;
-static long long totSamples = 0;
-static bool firstSample = true;
-static double Avg = 0.0;
+static double *history_samples = NULL;   // last archived samples 
+static int history_size = 0;
 
-static pthread_mutex_t latch = PTHREAD_MUTEX_INITIALIZER;
+static double alpha = 0.999;            // smoothing factor for EMA 
+static long long total_samples = 0;
+static bool first_sample = true;
+static double AvgRead = 0.0;
 
-static bool samplerInitialized = false;
-static atomic_bool goNextSample = false;
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
+// State bools
+static bool is_initialized = false;
+static atomic_bool sampling_enabled = false;
+static bool dip_detected = false; 
 
-
-//read light sensor raw adc values
+// Initialize sampling system and start the worker thread.
 void sampler_init() {
-    if (samplerInitialized) {
-        fprintf(stderr, "Sensor already initialized\n");
+    if (is_initialized) {
+        fprintf(stderr, "sampler: already initialized\n");
         return;
-    }   
-    samplerInitialized = true;
-    goNextSample =true;
+    }
+
+    is_initialized = true;
+    sampling_enabled = true;
+
     Period_init();
+
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    currSamples = malloc(sizeof(double)* MAX_SAMPLESPERSECOND);
-    if (!currSamples){
-        perror("sampler_init:malloc")
+
+    current_samples = malloc(sizeof(double) * MAX_SAMPLESPERSECOND);
+    if (!current_samples) {
+        perror("sampler: malloc failed");
         exit(-1);
-    }else if (read_adc_ch(samplerCH)<0){
-        perror("sampler_init:failed to read adc values")
-        exit(-1)
+    } else if (read_adc_ch(adc_channel) < 0) {
+        perror("sampler: failed to read adc channel");
+        exit(-1);
     }
-    pthread_create(&samplerTID, &attr, samplerThread, &totSamples);
+
+    //pass address of total_samples as the thread argument (keeps original behavior)
+    pthread_create(&thread_id, &attr, samplerThread, &total_samples);
     pthread_attr_destroy(&attr);
 }
 
+
+// Tear down sampling and free sampless. 
 void sampler_cleanup() {
-    // Clean up device
-     if (!samplerInitialized) {
-        fprintf(stderr, "LED not initialized\n");
+    if (!is_initialized) {
+        fprintf(stderr, "sampler: not initialized\n");
         return;
     }
-    samplerInitialized = false;
-    goNextSample = false;
-    pthread_mutex_lock(&latch);
-    free(currSamples);
-    free(histSamples);
-    currSamples= histSamples =NULL;
-    currSize = histSize = 0;
-    pthread_mutex_unlock(&latch);
-    
-    pthread_join(samplerTID,NULL)
+
+    is_initialized = false;
+    sampling_enabled = false;
+
+    pthread_mutex_lock(&mutex);
+    free(current_samples);
+    free(history_samples);
+    current_samples = history_samples = NULL;
+    current_size = history_size = 0;
+    pthread_mutex_unlock(&mutex);
+
+    pthread_join(thread_id, NULL);
+    // exit the calling thread context as original did; keep call to Period cleanup 
     pthread_exit(0);
     Period_cleanup();
 }
@@ -88,18 +105,22 @@ void sampler_moveCurrentDataToHistory(){
     pthread_mutex_unlock(&latch);
 }
 
+
+// Return how many samples are present in the preserved history snapshot. 
 int sampler_getHistorySize() {
     pthread_mutex_lock(&latch);
     int size = histSize;
     pthread_mutex_unlock(&latch);
     return size;
 }
+
 void sampler_getTimingStatistics(Period_statistics_t *pStats) {
     if (pStats) {
         Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_LIGHT, pStats);
     }
 }
-// Get the total number of samples taken
+
+/* Get/clear total samples statistics (preserve original mapping). */
 void sampler_getTotalSamples(Period_statistics_t *pStats) {
     if (pStats) {
         Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_FINAL, pStats);
@@ -107,52 +128,60 @@ void sampler_getTotalSamples(Period_statistics_t *pStats) {
 }
 
 
+// Return an allocated copy of the last archived history. Caller must free(). 
 double* sampler_getHistory(int* size) {
-    pthread_mutex_lock(&latch);
-    double* history = NULL;
-    if(histSize>0){
-        double* history = malloc(sizeof(double) * histSize);
-        if(history){
-            memcpy(history, histSamples, sizeof(double)*histSize);
+    pthread_mutex_lock(&mutex);
+    double* copy = NULL;
+    if (history_size > 0) {
+        copy = malloc(sizeof(double) * history_size);
+        if (copy) {
+            memcpy(copy, history_samples, sizeof(double) * history_size);
         }
     }
-    pthread_mutex_unlock(&latch);
-    return history;
+    if (size) {
+        *size = history_size;
+    }
+    pthread_mutex_unlock(&mutex);
+    return copy;
 }
 
 
-// Get the average light level (not tied to the history)
-double sampler_getAverageReading (double adcVals){
-    if(firstSample){
-            Avg = adcVals;
-            firstSample=false;
-        } else {
-            Avg= Alpha* Avg + (1.0-Alpha)*adcVals;
+
+/* Exponential moving average for the ADC samples. */
+double sampler_getAverageReading(double adc_val) {
+    if (first_sample) {
+        AvgRead = adc_val;
+        first_sample = false;
+    } else {
+        AvgRead = alpha * AvgRead + (1.0 - alpha) * adc_val;
+    }
+    return AvgRead;
+}
+
+
+/* Worker thread: repeatedly sample ADC, update sampless and stats. */
+void* samplerThread(void* arg) {
+    long long *limit_ptr = (long long*) arg;
+    long long limit = *limit_ptr;
+
+    sampler_init();
+    while (sampling_enabled) {
+        double adc_val = read_adc_ch(adc_channel);
+        if (adc_val < 0) {
+            perror("samplerThread: ADC read failed");
+            sleep_ms(1000); /* pause 1 second */
+            continue;
         }
-    return Avg;
-}
 
-void* samplerThread(void* arg){
-    long long *limitPTR = (long long*) arg;
-    long long limit = *limitPTR;
- 
-    
-    while(goNextSample){
-        double adcVals = read_adc_ch(samplerCH)
-            if (adcVals < 0) {
-                perror("samplerThread:ADC Values reading failed");
-                sleep_ms(1000) // sleep 1 second
-                continue;
-            }
-        //Start sampling
+        /* Mark timing and then store sample under lock */
         Period_markEvent(PERIOD_EVENT_SAMPLE_LIGHT);
-        pthread_mutex_lock(&latch);
+        pthread_mutex_lock(&mutex);
 
-        Avg = sampler_getAverageReading(adcVals);
-            
-         if (currSize < MAX_SAMPLESPERSECOND) {
-            currSamples[currSize] = adcVals;
-            currSize++;
+        AvgRead =sampler_getAverageReading(adc_val);
+
+        if (current_size < MAX_SAMPLESPERSECOND) {
+            current_samples[current_size] = adc_val;
+            current_size++;
         }
         int size = sampler_getHistorySize();
         
@@ -161,4 +190,7 @@ void* samplerThread(void* arg){
         pthread_mutex_unlock(&latch);
 
     }
+
+    sampler_cleanup();
+    return NULL;
 }
