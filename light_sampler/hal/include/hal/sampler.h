@@ -85,11 +85,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <stdbool.h>
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
-
 
 
 // Device parameters
@@ -98,12 +96,32 @@
 #define DEV_BITS 8
 #define DEV_SPEED 250000
 #define MAX_SAMPLESPERSECOND 1000
-#define MAX_ADCVALUE 4095.0   
-#define MAX_VOLTAGE 3.3       // Maximum voltage corresponding to ADC full scale 
+#define MAX_ADCVALUE 4095.0
 #define MAX_SAMPLE_SIZE (MAX_SAMPLES_PER_SECOND + 0.1*MAX_SAMPLES_PER_SECOND) // buffer for 10% overhead
+#define DIP_TRIG 124 
+#define DIP_REARM 87
 
 // Use the light sensor to read current light level.
+typedef struct {
+    struct {
+        double* samples;
+        int size;
+    } curr, hist;
+    
+    struct {
+        double avg;
+        long long total;
+    } stats;
+    
+    pthread_t threadID;
+    pthread_mutex_t lock;
+    bool initialized;
+} Sampler;
 
+enum DIP_EVENTS {
+    ARMED,
+    DIPPING
+};
 // Setup light
 void sampler_init();
 
@@ -125,8 +143,12 @@ int sampler_getHistorySize();
 // Note: It provides both data and size to ensure consistency.
 double* sampler_getHistory(int* size);
 
+//Get current data read by sensors
+double sampler_getCurrentReading();
 // Get the average light level (not tied to the history)
-double sampler_getAverageReading(double adcVals);
+double sampler_getAverageReading(double adc);
+// Get the number of Dips
+int sampler_getHistDips(void);
 
 // Get the total number of light level samples taken so far.
 long long sampler_getNumSamplesTaken();
