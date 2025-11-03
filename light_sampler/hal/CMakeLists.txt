@@ -7,4 +7,24 @@ file(GLOB MY_SOURCES "src/*.c")
 
 add_library(hal STATIC ${MY_SOURCES})
 
-target_include_directories(hal PUBLIC include)
+
+# --- Find libgpiod ---
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBGPIOD REQUIRED libgpiod)
+
+# --- Include directories ---
+target_include_directories(hal
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${LIBGPIOD_INCLUDE_DIRS}
+)
+
+# --- Link against libgpiod ---
+target_link_libraries(hal
+    PUBLIC ${LIBGPIOD_LIBRARIES}
+)
+
+# --- Diagnostics ---
+message(STATUS "Using libgpiod version: ${LIBGPIOD_VERSION}")
+message(STATUS "libgpiod include dirs: ${LIBGPIOD_INCLUDE_DIRS}")
+message(STATUS "libgpiod libraries: ${LIBGPIOD_LIBRARIES}")
