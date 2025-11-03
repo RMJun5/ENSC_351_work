@@ -8,7 +8,7 @@ struct gpiod_line *line;
 Direction read_encoder() {
 
     // open the gpiochip0
-    chip = gpiod_chip_open_by_name(CHIPNAME);
+    chip = gpiod_chip_get_info(CHIPNAME);
     if (chip == NULL){
         perror("Cannot open the chip");
         gpiod_chip_close(chip);
