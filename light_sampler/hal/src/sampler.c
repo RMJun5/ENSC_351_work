@@ -26,7 +26,6 @@ static double Avg = 0.0;
 
 static pthread_mutex_t latch = PTHREAD_MUTEX_INITIALIZER;
 
-Period_statistics_t stats = {0};
 static bool samplerInitialized = false;
 static atomic_bool goNextSample = false;
 
@@ -80,9 +79,9 @@ void sampler_moveCurrentDataToHistory(){
     free(histSamples);
     histSamples = malloc(sizeof(double)* currSize);
     if (histSamples){
-        memcpy(histSamples,currSamples,sizeof(double)*currSize)
+        memcpy(histSamples,currSamples,sizeof(double)*currSize);
         histSize = currSize;
-        currSize = 0; //reset current size for next 
+        currSize = 0;
     } else{
         histSize = 0;
     }
@@ -90,7 +89,6 @@ void sampler_moveCurrentDataToHistory(){
 }
 
 int sampler_getHistorySize() {
-    // read from history.txt and return the number of lines
     pthread_mutex_lock(&latch);
     int size = histSize;
     pthread_mutex_unlock(&latch);
@@ -122,11 +120,11 @@ double* sampler_getHistory(int* size) {
     return history;
 }
 
+
 // Get the average light level (not tied to the history)
 double sampler_getAverageReading (double adcVals){
     if(firstSample){
             Avg = adcVals;
-            stats.avgPeriodInMs = Avg;
             firstSample=false;
         } else {
             Avg= Alpha* Avg + (1.0-Alpha)*adcVals;
@@ -157,8 +155,7 @@ void* samplerThread(void* arg){
             currSize++;
         }
         int size = sampler_getHistorySize();
-
-
+        
         totSamples++;
         
         pthread_mutex_unlock(&latch);
