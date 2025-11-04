@@ -78,8 +78,8 @@
  * 
  */
 
-#ifndef _SENSOR_H_
-#define _SENSOR_H_
+#ifndef _SAMPLER_H_
+#define _SAMPLER_H_
 
 #include <pthread.h>
 #include <stdint.h>
@@ -106,7 +106,12 @@ typedef struct {
     struct {
         double* samples;
         int size;
-    } curr, hist;
+    } curr;
+    struct{
+        double* samples;
+        int size;
+        int dips;
+    } hist;
     
     struct {
         double avg;

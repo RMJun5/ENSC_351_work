@@ -20,7 +20,7 @@
 static int adc_channel = 0;
 static Sampler samp = {
     .curr = {NULL, 0},
-    .hist = {NULL, 0},
+    .hist = {NULL, 0,0},
     .stats = {0.0, 0},
     .lock = PTHREAD_MUTEX_INITIALIZER,
     .initialized = false
@@ -191,6 +191,7 @@ int sampler_getHistDips(){
         }
     }
     free(hist);
+    samp.hist.dips = dips;
     return dips;
 }
 
