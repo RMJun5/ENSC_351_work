@@ -1,4 +1,5 @@
 # CMake Build Configuration for root of project
+
 cmake_minimum_required(VERSION 3.18)
 project(light_sampler C)
 set(CMAKE_C_STANDARD 11)
@@ -6,7 +7,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Compiler options (inherited by sub-folders)
 
-# add_compile_options(-Wall -Werror -Wpedantic -Wextra)
+# add_compile_options(-Wall -Werror -Wpedantic -Wextra) 
 # add_compile_options(-fdiagnostics-color)
 
 # --- Toolchain auto-detect ---
@@ -15,17 +16,19 @@ if(NOT CMAKE_TOOLCHAIN_FILE AND NOT CMAKE_CROSSCOMPILING)
     message(STATUS "Setting toolchain file to /aarch64-toolchain.cmake...")
     if(EXISTS ${TOOLCHAIN_FILE})
         message(STATUS "Auto-detecting toolchain file: ${TOOLCHAIN_FILE}")
-        set(CMAKE_TOOLCHAIN_FILE ${TOOLCHAIN_FILE} CACHE FILEPATH "Toolchain file" FORCE)
     else()
         message(STATUS "No toolchain file found, using default compiler")
     endif()
 endif()
 
+
+message(STATUS "Cross-compiling with sysroot: ${CMAKE_CROSSCOMPILING}")
+
 # --- Sysroot support ---
 if(CMAKE_CROSSCOMPILING AND DEFINED CMAKE_SYSROOT)
     message(STATUS "Cross-compiling with sysroot: ${CMAKE_SYSROOT}")
-    set(ENV{PKG_CONFIG_SYSROOT_DIR} ${CMAKE_SYSROOT})
-    set(ENV{PKG_CONFIG_PATH} ${CMAKE_SYSROOT}/usr/lib/aarch64-linux-gnu/pkgconfig)
+    set(ENV{PKG_CONFIG_SYSROOT_DIR} "/home/kbph/ENSC_351/public/byai-sysroot")
+    set(ENV{PKG_CONFIG_PATH} "/home/kbph/ENSC_351/public/byai-sysroot/usr/pkgconfig")
     set(CMAKE_FIND_ROOT_PATH ${CMAKE_SYSROOT})
 endif()
 
