@@ -9,4 +9,6 @@ void sleep_ms(long long ms);
 long long getTimeInNanoS(void);
 double nanotoms(int ns);
 long long getTimeInMs(void);
+static void sanitize_line(char *s);
+static void to_lower_ascii(char *s);
 #endif

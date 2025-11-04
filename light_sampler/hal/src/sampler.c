@@ -171,20 +171,27 @@ int sampler_getHistDips(){
         return 0;
     }
     memccpy(hist, src, sizeof(double)*(size_t)n);
-    double currEma = sample.stats.avg;
+    double currEma = samp.stats.avg;
     pthread_mutex_unlock(&samp.lock);
     
     int dips = 0;
-    enum DIP_EVENT = ARMED;
+    enum DIP_EVENTS state = ARMED;
     dip_detected = false;
     for (int i=0; i<n;i++){
         const double samples= hist[i];
-    
-    if (samples<= currEma+DIP_TRIG){
+        currEma = sampler_getAverageReading(samples);
 
+        if (samples<= currEma-DIP_TRIG){
+            dip_detected = true;
+            state = DIPPING;
+            ++dips;
+        } else if (samples>= currEma-DIP_REARM){
+            dip_detected = false;
+            state = ARMED;
+        }
     }
-        
-    }
+    free(hist);
+    return dips;
 }
 
 

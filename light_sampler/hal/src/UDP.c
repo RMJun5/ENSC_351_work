@@ -12,9 +12,15 @@
 #include <pthread.h>
 
 static UDP udp = {
-    .running = false;
+    .running = false,
+    .socket = -1,
+    .shutdown=NULL,
 }
 
-void* udp_listener(void* arg){
+static char last_cmd[64]={0};
 
+void send_text(int socket, UDP   )
+
+void* udp_listener(void* arg){
+    
 }

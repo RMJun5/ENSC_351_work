@@ -117,3 +117,21 @@ long long getTimeInMs(void) {
     long long milliSeconds = seconds * 1000LL + nanoSeconds / 1000000LL;
     return milliSeconds;
 }
+
+static void sanitize_line(char *s)
+{
+    // Trim leading/trailing whitespace; convert to lowercase for command compare
+    // (Assignment: lower-case accepted; case-insensitive optional.)
+    char *p = s;
+    while (*p && (*p == '\r' || *p == '\n')) p++; // unlikely at front, but safe
+    // left trim spaces
+    while (*p && isspace((unsigned char)*p)) p++;
+    if (p != s) memmove(s, p, strlen(p) + 1);
+    // right trim
+    size_t n = strlen(s);
+    while (n > 0 && isspace((unsigned char)s[n-1])) s[--n] = '\0';
+}
+static void to_lower_ascii(char *s)
+{
+    for (; *s; ++s) *s = (char)tolower((unsigned char)*s);
+}
