@@ -72,10 +72,6 @@ void sampler_init() {
         exit(EXIT_FAILURE);
     }
 
-    /* Signal the worker thread to run */
-    // atomic_store_explicit(&running, true, memory_order_release);
-    // pthread_attr_t attr;
-    // pthread_attr_init(&attr);
 
     samp.buffer.samples = malloc(sizeof(double) * MAX_SAMPLESPERSECOND);
     if (!samp.buffer.samples) {
@@ -89,17 +85,12 @@ void sampler_init() {
     samp.stats.avg = 0.0;
     samp.stats.totalSamplesTaken = 0;
 
-    // } else if (read_adc_ch(fd, adc_channel, DEV_SPEED) < 0) {
-    //     perror("sampler_init(): failed to read adc channel");
-    //     exit(-1);
-    // }
+    if (read_adc_ch(DEV_PATH, adc_channel, DEV_SPEED) < 0) {
+         perror("sampler_init(): failed to read adc channel");
+         exit(-1);
+    }
     atomic_store(&running, true);
     samp.initialized = true;
-
-    // // pthread_create(&samplerThread_id, &attr, samplerThread, NULL);
-    // pthread_create(@samp.threadID, NULL, samplerThread, NULL);
-    // // pthread_attr_destroy(&attr);
-    // // free(samp.buffer.samples);
     
     pthread_attr_t attr;
     pthread_attr_init(&attr);
@@ -119,9 +110,6 @@ void sampler_cleanup() {
     }
 
     /* Stop the worker thread and wait for it to exit */
-    // atomic_store_explicit(&running, false, memory_order_release);
-    // pthread_join(samplerThread_id, NULL);
-
     atomic_store(&running, false);
     pthread_join(samp.threadID, NULL);
 
@@ -135,17 +123,6 @@ void sampler_cleanup() {
     pthread_mutex_unlock(&samp.lock);
 
     samp.initialized = false;
-
-    /* Free buffers under the sampler lock */
-//     pthread_mutex_lock(&samp.lock);
-//     free(samp.buffer.samples);
-//     free(samp.history.samples);
-//     samp.buffer.samples = samp.history.samples = NULL;
-//     samp.buffer.size = samp.history.size = 0;
-//     pthread_mutex_unlock(&samp.lock);
-
-//     Period_cleanup();
-//     samp.initialized = false;
 }
 
 
@@ -212,8 +189,8 @@ double* sampler_getHistory(int*size ) {
  * @return the number of samples taken
  */
 long long sampler_getNumSamplesTaken(){
-    // printf("Total number of samples: %d", samp.stats.total);
-    // return samp.stats.total;
+    printf("Total number of samples: %d", samp.stats.totalSamplesTaken);
+    return samp.stats.totalSamplesTaken;
     pthread_mutex_lock(&samp.lock);
     long long t = samp.stats.totalSamplesTaken;
     pthread_mutex_unlock(&samp.lock);
@@ -313,7 +290,6 @@ double sampler_getAverageReading(double adc) {
 int sampler_getHistDips(){
 
     pthread_mutex_lock(&samp.lock);
-    // double *src = samp.history.samples;
     int n = samp.history.size; 
 
     if (n <= 0 || samp.history.samples == NULL) {
@@ -334,7 +310,6 @@ int sampler_getHistDips(){
     pthread_mutex_unlock(&samp.lock);
 
     double currEma = samp.stats.avg;
-    //pthread_mutex_unlock(&samp.lock);
     int dips = 0;
     dip_detected = false;
     double latestSample = samp.buffer.samples[samp.buffer.size];
@@ -342,10 +317,8 @@ int sampler_getHistDips(){
     DIP_EVENTS state = ARMED;
 
     for (int i = 0; i < n; i++){
-        // const double samples= hist[i];
-        // currEma = sampler_getAverageReading(samples);
         currEma = sampler_getAverageReading(hist[i]);
-        // if (samples<= currEma-DIP_TRIG){
+        
         if (!dip_detected && latestSample <= currEma - DIP_TRIG){
             dip_detected = true;
             state = DIPPING;
@@ -356,7 +329,6 @@ int sampler_getHistDips(){
         }
     }
     free(hist);
-    //samp.history.dips = dips; // maybe not needed
     return dips;
 }
 
@@ -381,7 +353,6 @@ void* samplerThread(void* arg) {
     struct timespec last_rotation;
     clock_gettime(CLOCK_MONOTONIC, &last_rotation);
     
-    // while (atomic_load_explicit(&running, memory_order_acquire)) {
     while (atomic_load(&running)) {
 
         // Direct ADC read (don't use getCurrentReading to avoid double-locking)
@@ -420,7 +391,7 @@ void* samplerThread(void* arg) {
         if (samp.buffer.size < MAX_SAMPLESPERSECOND) {
             samp.buffer.samples[samp.buffer.size++] = adcVal;
         }
-        
+
         Period_init();
 
         pthread_mutex_unlock(&samp.lock);
