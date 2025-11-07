@@ -1,4 +1,3 @@
-
 // #include "hal/sampler.h"
 // #include "hal/led.h"
 // #include "hal/periodTimer.h"
@@ -43,7 +42,7 @@ static const int SAMPLE_INTERVAL_MS = 1;  // 1ms between samples
 // Main sampler state
 static Sampler samp = {
     .buffer = {NULL, 0},                    // Current second's samples
-    .hist = {NULL, 0, 0},                   // Previous second's history and dip count
+    .history = {NULL, 0, 0},                   // Previous second's history and dip count
     .stats = {0.0, 0},                      // EMA and total samples
     .lock = PTHREAD_MUTEX_INITIALIZER,      // Protects all shared state
     .initialized = false                    // Initialization flag
@@ -79,15 +78,15 @@ void sampler_init() {
     // pthread_attr_t attr;
     // pthread_attr_init(&attr);
 
-    samp.curr.samples = malloc(sizeof(double) * MAX_SAMPLESPERSECOND);
-    if (!samp.curr.samples) {
+    samp.buffer.samples = malloc(sizeof(double) * MAX_SAMPLESPERSECOND);
+    if (!samp.buffer.samples) {
         perror("sampler_init(): malloc failed");
         exit(-1);
     }
 
-    samp.curr.size = 0;
-    samp.hist.samples = NULL;
-    samp.hist.size = 0;
+    samp.buffer.size = 0;
+    samp.history.samples = NULL;
+    samp.history.size = 0;
     samp.stats.avg = 0.0;
     samp.stats.totalSamplesTaken = 0;
 
@@ -102,7 +101,7 @@ void sampler_init() {
     // // pthread_create(&samplerThread_id, &attr, samplerThread, NULL);
     // pthread_create(@samp.threadID, NULL, samplerThread, NULL);
     // // pthread_attr_destroy(&attr);
-    // // free(samp.curr.samples);
+    // // free(samp.buffer.samples);
     
     pthread_attr_t attr;
     pthread_attr_init(&attr);
@@ -129,12 +128,12 @@ void sampler_cleanup() {
     pthread_join(samp.threadID, NULL);
 
     pthread_mutex_lock(&samp.lock);
-    free(samp.curr.samples);
-    free(samp.hist.samples);
-    samp.curr.samples = NULL;
-    samp.hist.samples = NULL;
-    samp.curr.size = 0;
-    samp.hist.size = 0;
+    free(samp.buffer.samples);
+    free(samp.history.samples);
+    samp.buffer.samples = NULL;
+    samp.history.samples = NULL;
+    samp.buffer.size = 0;
+    samp.history.size = 0;
     pthread_mutex_unlock(&samp.lock);
 
     Period_cleanup();
@@ -142,10 +141,10 @@ void sampler_cleanup() {
 
     /* Free buffers under the sampler lock */
 //     pthread_mutex_lock(&samp.lock);
-//     free(samp.curr.samples);
-//     free(samp.hist.samples);
-//     samp.curr.samples = samp.hist.samples = NULL;
-//     samp.curr.size = samp.hist.size = 0;
+//     free(samp.buffer.samples);
+//     free(samp.history.samples);
+//     samp.buffer.samples = samp.history.samples = NULL;
+//     samp.buffer.size = samp.history.size = 0;
 //     pthread_mutex_unlock(&samp.lock);
 
 //     Period_cleanup();
@@ -160,7 +159,7 @@ void sampler_cleanup() {
  */ 
 int sampler_getHistorySize() {
     pthread_mutex_lock(&samp.lock);
-    int n = samp.hist.size;
+    int n = samp.history.size;
     pthread_mutex_unlock(&samp.lock);
     return n;
 }
@@ -193,12 +192,12 @@ double* sampler_getHistory(int*size ) {
     double* histcopy = NULL;
 
     pthread_mutex_lock(&samp.lock);
-    int n = samp.hist.size;
+    int n = samp.history.size;
     if (size) *size = n;
-    if (n > 0 && samp.hist.samples) {
+    if (n > 0 && samp.history.samples) {
         histcopy = malloc(sizeof(double) * (size_t)n);
         if (histcopy) {
-            memcpy(histcopy, samp.hist.samples, sizeof(double) * (size_t)n);
+            memcpy(histcopy, samp.history.samples, sizeof(double) * (size_t)n);
         }
     }
     pthread_mutex_unlock(&samp.lock);
@@ -269,19 +268,19 @@ void sampler_moveCurrentDataToHistory() {
 
     pthread_mutex_lock(&samp.lock);
 
-    free(samp.hist.samples);
-    samp.hist.samples = NULL;
-    samp.hist.size = 0;
+    free(samp.history.samples);
+    samp.history.samples = NULL;
+    samp.history.size = 0;
 
-     if (samp.curr.size > 0 && samp.curr.samples) {
-        double *dst = malloc(sizeof(double) * (size_t)samp.curr.size);
+     if (samp.buffer.size > 0 && samp.buffer.samples) {
+        double *dst = malloc(sizeof(double) * (size_t)samp.buffer.size);
         if (dst) {
-            memcpy(dst, samp.curr.samples, sizeof(double) * (size_t)samp.curr.size);
-            samp.hist.samples = dst;
-            samp.hist.size    = samp.curr.size;
+            memcpy(dst, samp.buffer.samples, sizeof(double) * (size_t)samp.buffer.size);
+            samp.history.samples = dst;
+            samp.history.size    = samp.buffer.size;
         }
         // start a fresh second
-        samp.curr.size = 0;
+        samp.buffer.size = 0;
     }
 
     pthread_mutex_unlock(&samp.lock);
@@ -314,10 +313,10 @@ double sampler_getAverageReading(double adc) {
 int sampler_getHistDips(){
 
     pthread_mutex_lock(&samp.lock);
-    // double *src = samp.hist.samples;
-    int n = samp.hist.size; 
+    // double *src = samp.history.samples;
+    int n = samp.history.size; 
 
-    if (n <= 0 || samp.hist.samples == NULL) {
+    if (n <= 0 || samp.history.samples == NULL) {
         fprintf(stderr, "sampler_getHistDips(): History not found");
         pthread_mutex_unlock(&samp.lock);
         return 0;
@@ -331,13 +330,14 @@ int sampler_getHistDips(){
         return 0;
     }
 
-    memcpy(hist, samp.hist.samples, sizeof(double)*(size_t)n);
+    memcpy(hist, samp.history.samples, sizeof(double)*(size_t)n);
     pthread_mutex_unlock(&samp.lock);
 
     double currEma = samp.stats.avg;
     //pthread_mutex_unlock(&samp.lock);
     int dips = 0;
     dip_detected = false;
+    double latestSample = samp.buffer.samples[samp.buffer.size];
 
     enum DIP_EVENTS state = ARMED;
 
@@ -346,17 +346,17 @@ int sampler_getHistDips(){
         // currEma = sampler_getAverageReading(samples);
         currEma = sampler_getAverageReading(hist[i]);
         // if (samples<= currEma-DIP_TRIG){
-        if (!dip_detected && samples <= currEma - DIP_TRIG){
+        if (!dip_detected && latestSample <= currEma - DIP_TRIG){
             dip_detected = true;
             state = DIPPING;
             dips++;
-        } else if (dip_detected && samples >= currEma-DIP_REARM){
+        } else if (dip_detected && latestSample >= currEma-DIP_REARM){
             dip_detected = false;
             state = ARMED;
         }
     }
     free(hist);
-    samp.hist.dips = dips; // maybe not needed
+    samp.history.dips = dips; // maybe not needed
     return dips;
 }
 
@@ -370,7 +370,7 @@ void* samplerThread(void* arg) {
 
     (void)arg;  // unused
     
-    int fd = open(ADC_DEVICE, O_RDWR);
+    int fd = open(DEV_PATH, O_RDWR);
     if (fd < 0) {
         perror("open ADC device");
         return NULL;
@@ -417,8 +417,8 @@ void* samplerThread(void* arg) {
             samp.stats.avg = alpha * samp.stats.avg + (1.0 - alpha) * adcVal; // EMA update
         
         // Store in current buffer if there's room
-        if (samp.curr.size < MAX_SAMPLESPERSECOND) {
-            samp.curr.samples[samp.curr.size++] = adcVal;
+        if (samp.buffer.size < MAX_SAMPLESPERSECOND) {
+            samp.buffer.samples[samp.buffer.size++] = adcVal;
         }
         
         // Mark event for timing analysis

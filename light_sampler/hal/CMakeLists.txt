@@ -25,7 +25,7 @@ target_link_libraries(hal
     PUBLIC 
         ${LIBGPIOD_LIBRARIES}
         m          # libm for math functions
-        pthread    # pthreads
+        pthread    # pthread
 )
 
 # --- Diagnostics ---

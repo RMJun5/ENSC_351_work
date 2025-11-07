@@ -2,7 +2,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include "hal/UDP.h"
 #include "hal/sampler.h"
-#include "hal/periodTimer.h"
+#include "periodTimer.h"
 #include "hal/help.h"
 
 

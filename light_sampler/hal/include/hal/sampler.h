@@ -106,16 +106,16 @@ typedef struct {
     struct {
         double* samples;
         int size;
-    } curr;
+    } buffer;
     struct{
         double* samples;
         int size;
         int dips;
-    } hist;
+    } history;
     
     struct {
         double avg;
-        long long total;
+        long long totalSamplesTaken;
     } stats;
     
     pthread_t threadID;
