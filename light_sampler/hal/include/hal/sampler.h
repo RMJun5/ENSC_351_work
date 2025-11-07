@@ -127,7 +127,6 @@ typedef struct {
     struct {
         double avg;
         long long totalSamplesTaken;
-        long long totalSamplesTaken;
     } stats;
     
     pthread_t threadID;
