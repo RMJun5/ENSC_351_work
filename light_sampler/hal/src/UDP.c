@@ -2,13 +2,15 @@
 #define _POSIX_C_SOURCE 200809L
 #include "hal/UDP.h"
 #include "hal/sampler.h"
-#include "periodTimer.h"
+#include "hal/periodTimer.h"
 #include "hal/help.h"
 
 
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <errno.h>
+#include <ctype.h>  
+#include <stdatomic.h>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <signal.h>
@@ -26,8 +28,9 @@
 
 static UDP udp = {
     .sock = -1,
-    .running = ATOMIC_VAR_INIT(false),
+    .running = ATOMIC_VAR_INIT(false), // active
     .shutdown= ATOMIC_VAR_INIT(false),
+    .clen = sizeof(struct sockaddr_in)
 };
 
 static pthread_t UDPListenerID;
@@ -37,43 +40,71 @@ static socklen_t clen = 0;
 
 static char last_cmd[64]={0};
 
-void UDP_start (void){
-    if(UDPstarted){
+
+// Forward declarations
+// static void* UDPThread(void* arg);
+static void dispatch(const char *cmd);
+static void send_text(const char *text);
+
+
+
+/**
+ * @brief Start the UDP server
+ * 
+ */
+void UDP_start (void) {
+
+    if (atomic_load(&udp.running)){
         fprintf(stderr, "UDP_start: UDP server already started\n");
         return;
     }
-    UDPstarted =true;
-    
-   if (!udp.shutdown) {
-        fprint(stderr, "UDP_start():Shutdown flag must not be NULL\n")
+
+   //if (!udp.shutdown) {
+    if (atomic_load_explicit(&udp.shutdown, memory_order_acquire)) {
+        fprintf(stderr, "UDP_start():Shutdown flag is set\n");
         return;
-    } if (atomic_load_explicit(& udp.shutdown, memory_order_acquire)){
-         fprintf(stderr, "UDP_start: shutdown flag is already set\n");
+    } 
+    
+    // if (atomic_load_explicit(& udp.shutdown, memory_order_acquire)){
+    //     fprintf(stderr, "UDP_start: shutdown flag is already set\n");
+    //     return;
+    // }
+
+    int s = socket(AF_INET, SOCK_DGRAM, 0);
+    if (s < 0) { 
+        perror("socket"); 
         return;
     }
-    int s = socket(AF_INET, SOCK_DGRAM, 0);
-     if (s < 0) { perror("socket"); return NULL; }
-     int yes = 1;
-     if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0) {
+
+    int yes = 1;
+    if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0) {
         perror("setsockopt(SO_REUSEADDR)");
         close(s);
         return;
     }
-     // Bind 0.0.0.0:PORT
+
+    // Bind 0.0.0.0:PORT
     struct sockaddr_in addr = {0};
     addr.sin_family      = AF_INET;
     addr.sin_port        = htons(PORT);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
     if (bind(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
         perror("bind");
         close(s);
         return;
     }
-    udp.sock     = s;
-    atomic_store_explicit(&udp.running, true, memory_order_release);
+    
+    udp.sock = s; // udp.state.sock = s;
+    // atomic_store_explicit(&udp.running, true, memory_order_release);
+    atomic_store(&udp.running, true);
+    atomic_store(&udp.shutdown, false);
+
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    int rc = pthread_create(&UDPListenerID, attr, UDPThread, NULL);
+    int rc = pthread_create(&UDPListenerID, &attr, UDPThread, NULL);
+    pthread_attr_destroy(&attr);
+
     if (rc != 0) {
         errno = rc;
         perror("pthread_create");
@@ -81,16 +112,19 @@ void UDP_start (void){
         udp.sock = -1;
         return;
     }
+
     UDPstarted = true;
-    pthread_attr_destroy(&attr);
-    return;
+
 }
 
 void UDP_stop(void){
-    if (!UDPstarted){
+    if (!atomic_load(&udp.running)){
         fprintf(stderr, "UDP_cleanup: UDP server already stopped\n");
         return;
     }
+    
+    atomic_store(&udp.shutdown, true);
+
     UDPstarted = false;
     atomic_store_explicit(&udp.shutdown, true, memory_order_release);
     
@@ -111,10 +145,15 @@ void UDP_stop(void){
     atomic_store_explicit(&udp.running, false, memory_order_release);
 }
 
-void send_text(const char *text ){
-    size_t len = strlen(text);
+void send_text(const char *text ) {
 
+    // Make sure it uses the global socket
+    if (clen == 0 || udp.sock < 0) return;
+    sendto(udp.sock, text, strlen(text), 0, (struct sockaddr*)&client, clen);
+
+    size_t len = strlen(text);
     const char *cursor = text;
+    
     while(len > 0){
         size_t chunk = len < CHUNK_LIM ? len : CHUNK_LIM;
         
@@ -156,14 +195,26 @@ void UDP_help (void){
                       "<enter>(a blank input) - repeats last command"};
     
     printf("Available commands:\n"); 
-    for (int i = 0; i < sizeof(help); i++){
-        send_text(sock, client, clen, help[i]);
+    int count = sizeof(help) / sizeof(help[0]);
+    for (int i = 0; i < count; ++i) {
+        send_text(help[i]);
     }
     // send_text(help);
 }
+
+/**
+ * @brief Returns a list of commands
+ * 
+ */
 void UDP_question (void){
-    UDP_help(udp.sock, client, clen);
+    //UDP_help(udp.sock, client, clen);
+    UDP_help();
 }
+
+/**
+ * @brief Returns the total number of samples
+ * 
+ */
 void UDP_count(void){
     long long n = sampler_getNumSamplesTaken();
     char countbuf[128];
@@ -171,34 +222,51 @@ void UDP_count(void){
     if (m) send_text(countbuf);
 }
 void UDP_length(void){
-    int n = sampler_getHistorySize();
+    int size = sampler_getHistorySize();
     char lengthbuf[128];
-    int m = snprintf(lengthbuf, sizeof(lengthbuf), "# of samples taken last second: %d \n", n);
-    if(m) send_text(lengthbuf);
+    int m = snprintf(lengthbuf, sizeof(lengthbuf), "# of samples taken last second: %d \n", size);
+    if (m) {send_text(lengthbuf);}
 }
+
+/**
+ * @brief Returns the number of dips in the last second
+ * 
+ */
 void UDP_dips(void){
     int d = sampler_getHistDips();
     char dipbuf[128];
     int m = snprintf(dipbuf, sizeof(dipbuf), "# of samples taken last second: %d \n", d);
-    if (m) send_text(udp.sock, client,clen, dipbuf)
+    if (m) {
+        // send_text(udp.sock, client,clen, dipbuf);
+        send_text(dipbuf);
+    }
 }
-void UDP_history(const double *hist, int n,) {
-    /* Send the last-second history as voltages, 10 values per line, 3 decimals.
-     * Format lines containing up to 10 values and send each line as a
-     * separate message. This guarantees no single sample's digits are split
-     * across packets and keeps each UDP packet well under the MTU.
-     */
-    if (!hist|| n<=0) {
-        const char *none = n == 0
-            ? "History empty\n"
-            : "History unavailable (first sample)\n";
+
+/**
+ * @brief Sends the last-second history as voltages, 10 values per line, 3 decimals.
+ * Format lines containing up to 10 values and send each line as a
+ * separate message. This guarantees no single sample's digits are split
+ * across packets and keeps each UDP packet well under the MTU.
+ *
+ * @param hist the history
+ * @param n the number of samples
+ */
+void UDP_history(double *hist, int n) { // get rid of n param
+    
+    if (!hist|| n <= 0) {
+        const char *none;
+        if (n == 0) {
+            none = "History empty\n";
+        }
+        else {
+            none = "History unavailable (first sample)\n";
+        }
         send_text(none);
         free((void*)hist);
         return;
     }
-    
 
-    int n = sampler_getHistorySize();
+    n = sampler_getHistorySize(); // or make this a diff variable
     if (n <= 0) {
         const char *none = "History empty\n";
         send_text(none);
@@ -259,8 +327,13 @@ void UDP_history(const double *hist, int n,) {
     free((void*)hist);
     return;
 }
-static void dispatch(const char *cmd)
-{   
+
+/**
+ * @brief Dispatch a command to the terminal 
+ * 
+ * @param cmd the typed command
+ */
+static void dispatch(const char *cmd) {   
     if(cmd[0] == '\0'){
         // Repeat last command
         if (last_cmd[0] == '\0') {
@@ -272,40 +345,71 @@ static void dispatch(const char *cmd)
         // Save for blank-repeat
         strncpy(last_cmd, cmd, sizeof(last_cmd)-1);
         last_cmd[sizeof(last_cmd)-1] = '\0';
-    }if (!strcasecmp(cmd, "help") || !strcmp(cmd, "?")) {
+    } 
+    if (!strcasecmp(cmd, "help") || !strcmp(cmd, "?")) {
         UDP_help();
-    } else if (!strcasecmp(cmd, "count")) {
+    } 
+    else if (!strcasecmp(cmd, "count")) {
         UDP_count();
-    } else if (!strcasecmp(cmd, "length")) {
+    } 
+    else if (!strcasecmp(cmd, "length")) {
         UDP_length();
-    } else if (!strcasecmp(cmd, "dips")) {
+    } 
+    else if (!strcasecmp(cmd, "dips")) {
         UDP_dips();
-    }else if (!strcasecmp(cmd, "history")) {
-         int n = 0;
+    }
+    else if (!strcasecmp(cmd, "history")) {
+        int n = 0;
         double *hist = sampler_getHistory(&n);  // malloc'd copy + count
         UDP_history(hist, n);
-    } else if (!strcasecmp(cmd, "stop")) {
+    } 
+    else if (!strcasecmp(cmd, "stop")) {
         const char *m = "Stopping server...\n";
         send_text(m);
-        if (udp.shutdown) atomic_store_explicit(udp.shutdown, true, memory_order_release);
-        UDP_stop();
-     } else {
+        if (udp.shutdown) {
+            atomic_store_explicit(&udp.shutdown, true, memory_order_release);
+            UDP_stop();
+        }
+    } 
+    else {
         const char *m = "Unknown command. Type 'help'.\n";
         send_text(m);
     }
 }
+
+/**
+ * @brief Trim whitespace from the end of a line
+ * 
+ * @param line the line of text to trim
+ */
+void trim_line(char *line) {
+    int len = strlen(line);
+    while (len > 0 && isspace(line[len-1])) {
+        line[--len] = '\0';
+    }
+}
+
+/**
+ * @brief The UDP server thread
+ * 
+ * @param arg 
+ * @return void* 
+ */
 void* UDPThread(void* arg) {
     (void)arg;
     atomic_store_explicit(&udp.running, true, memory_order_release);
 
     char buf[BUFF_SIZE];
-    while (!udp.shutdown || !atomic_load_explicit(udp.shutdown, memory_order_acquire)) {
+    // while (!udp.shutdown || !atomic_load_explicit(udp.shutdown, memory_order_acquire)) {
+    while (!atomic_load_explicit(&udp.shutdown, memory_order_acquire)) {
+
         // Wait for data or wake periodically to check shutdown
         fd_set rfds;
         FD_ZERO(&rfds);
         FD_SET(udp.sock, &rfds);
-         struct timeval tv = { .tv_sec = 0, .tv_usec = 200000 }; // 200 ms
+        struct timeval tv = { .tv_sec = 0, .tv_usec = 200000 }; // 200 ms
         int r = select(udp.sock + 1, &rfds, NULL, NULL, &tv);
+
         if (r < 0) {
             if (errno == EINTR) continue;
             perror("select");
@@ -314,6 +418,7 @@ void* UDPThread(void* arg) {
             // timeout, loop to check shutdown
             continue;
         }
+
         if (FD_ISSET(udp.sock, &rfds)) {
             ssize_t n = recvfrom(udp.sock, buf, sizeof(buf)-1, 0,
                                  (struct sockaddr*)&client, &clen);
@@ -327,7 +432,7 @@ void* UDPThread(void* arg) {
             dispatch(buf);
         }
     }
-     atomic_store_explicit(&udp.running, false, memory_order_release);
+    atomic_store_explicit(&udp.running, false, memory_order_release);
     return NULL;
 
 }

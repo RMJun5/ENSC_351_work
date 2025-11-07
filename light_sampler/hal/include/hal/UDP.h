@@ -22,7 +22,8 @@ typedef struct {
     int sock;
     atomic_bool shutdown;
     atomic_bool running;
-}UDP;
+    int clen;
+} UDP;
 
 void* UDPThread(void* arg);
 
@@ -35,5 +36,5 @@ void UDP_history(double* hist, int n);
 
 void UDP_start(void);
 void UDP_stop(void);
-void send_text(const char *text );
+// void send_text(const char *text );
 #endif
