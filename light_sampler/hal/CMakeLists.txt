@@ -7,6 +7,12 @@ file(GLOB MY_SOURCES "src/*.c")
 
 add_library(hal STATIC ${MY_SOURCES})
 
+# Add periodtimer.h
+target_include_directories(hal
+    BEFORE
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
 # --- Find libgpiod ---
 find_package(PkgConfig REQUIRED)
@@ -16,14 +22,14 @@ pkg_check_modules(LIBGPIOD REQUIRED libgpiod)
 target_include_directories(hal
     BEFORE
     PUBLIC
-        ${GPIOD_INCLUDE_DIRS}
+        ${LIBGPIOD_INCLUDE_DIRS}
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 # --- Link against libgpiod ---
 target_link_libraries(hal
     PUBLIC 
-        ${GPIOD_LIBRARIES}
+        ${LIBGPIOD_LIBRARIES}
         m          # libm for math functions
         pthread    # pthread
 )

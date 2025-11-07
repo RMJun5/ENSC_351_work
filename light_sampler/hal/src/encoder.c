@@ -3,7 +3,7 @@
 
 unsigned int line_offset = 16;      // The offset of the GPIO line you want to control (e.g., GPIO16)
 struct gpiod_chip *chip;
-struct gpiod_line *line;
+struct gpiod_line_info *line;
 int num;
 struct gpiod_chip_info *info;
 struct gpiod_line_request *request;
@@ -26,7 +26,7 @@ void read_encoder() {
     printf("%s", "Chip opened");
     
     // // Get the specific GPIO line
-    line = gpiod_chip_get_line(chip, 23);
+    line = gpiod_chip_get_line_info(chip, 23);
     if (line == NULL){
         perror("Cannot fetch line");
         gpiod_chip_close(chip);

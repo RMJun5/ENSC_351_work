@@ -83,7 +83,7 @@ int devRead(const char * path, uint8_t mode, uint8_t bits, uint32_t speed) {
  * @param Event the event
  * @return Period_statistics_t a struct containing the statistics
  */
-Period_statistics_t printStatistics(enum Period_whichEvent Event) {
+Period_statistics_t printStatistics(Period_whichEvent Event) {
     Period_statistics_t stats;
     Period_getStatisticsAndClear(Event, &stats);
 

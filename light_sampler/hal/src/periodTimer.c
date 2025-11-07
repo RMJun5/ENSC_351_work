@@ -6,7 +6,7 @@
     #include <string.h>
     #include <stdlib.h>
 
-    #include "periodTimer.h"
+    #include "hal/periodTimer.h"
 
     // Written by Brian Fraser
 
@@ -69,7 +69,7 @@ void Period_cleanup(void) {
  * 
  * @param whichEvent the event
  */
-void Period_markEvent(enum Period_whichEvent whichEvent) {
+void Period_markEvent(Period_whichEvent whichEvent) {
     
     assert (whichEvent >= 0 && whichEvent < NUM_PERIOD_EVENTS);
     assert (s_initialized);
@@ -86,7 +86,7 @@ void Period_markEvent(enum Period_whichEvent whichEvent) {
     pthread_mutex_unlock(&s_lock);
 }
 
-    void Period_getStatisticsAndClear(enum Period_whichEvent whichEvent, Period_statistics_t *pStats) {
+    void Period_getStatisticsAndClear(Period_whichEvent whichEvent, Period_statistics_t *pStats) {
         
         assert (whichEvent >= 0 && whichEvent < NUM_PERIOD_EVENTS);
         assert (s_initialized);

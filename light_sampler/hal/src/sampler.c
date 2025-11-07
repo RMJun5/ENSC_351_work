@@ -214,7 +214,7 @@ double* sampler_getHistory(int*size ) {
  * 
  * @return the number of samples taken
  */
-long long sampler_getNumsamplesTaken(){
+long long sampler_getNumSamplesTaken(){
     // printf("Total number of samples: %d", samp.stats.total);
     // return samp.stats.total;
     pthread_mutex_lock(&samp.lock);

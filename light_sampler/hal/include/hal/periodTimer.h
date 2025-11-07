@@ -18,11 +18,11 @@
 // Maximum number of timestamps to record for a given event.
 #define MAX_EVENT_TIMESTAMPS (1024*4)
 
-enum Period_whichEvent {
+typedef enum {
     PERIOD_EVENT_SAMPLE_LIGHT,
     PERIOD_EVENT_SAMPLE_FINAL,
     NUM_PERIOD_EVENTS
-};
+} Period_whichEvent;
 
 typedef struct {
     int numSamples;
@@ -39,13 +39,13 @@ void Period_cleanup(void);
 // indicated event. This allows later calls to 
 // Period_getStatisticsAndClear() to access these timestamps
 // and compute the timing statistics for this periodic event.
-void Period_markEvent(enum Period_whichEvent whichEvent);
+void Period_markEvent(Period_whichEvent whichEvent);
 
 // Fill the `pStats` struct, which must be allocated by the calling
 // code, with the statistics about the periodic event `whichEvent`.
 // This function is threadsafe, and may be called by any thread.
 // Calling this function will, after it computes the timing
 // statistics, clear the data stored for this event.
-void Period_getStatisticsAndClear(enum Period_whichEvent whichEvent, Period_statistics_t *pStats);
+void Period_getStatisticsAndClear(Period_whichEvent whichEvent, Period_statistics_t *pStats);
 
 #endif
