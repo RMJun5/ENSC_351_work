@@ -6,7 +6,7 @@
     #include <string.h>
     #include <stdlib.h>
 
-    #include "periodTimer.h"
+    #include "hal/periodTimer.h"
 
     // Written by Brian Fraser
 
@@ -21,51 +21,72 @@
         long long prevTimestampInNs;
     } timestamps_t;
 
-    static timestamps_t s_eventData[NUM_PERIOD_EVENTS];
+static timestamps_t s_eventData[NUM_PERIOD_EVENTS];  // Data for each event
+static pthread_mutex_t s_lock = PTHREAD_MUTEX_INITIALIZER;  // Lock for accessing data
+static bool s_initialized = false;                          // Initialization flag
 
-    static pthread_mutex_t s_lock = PTHREAD_MUTEX_INITIALIZER;
-    static bool s_initialized = false;
+// Prototypes
+static void updateStats(timestamps_t *pData, Period_statistics_t *pStats);
 
+/**
+ * @brief Returns the current time in nanoseconds
+ * 
+ * @return long long 
+ */
+static long long getTimeInNanoS(void) {
+    struct timespec spec;
+    clock_gettime(CLOCK_BOOTTIME, &spec);
+    long long seconds = spec.tv_sec;
+    long long nanoSeconds = spec.tv_nsec + seconds * 1000*1000*1000;
+    assert(nanoSeconds > 0);
+    
+    static long long lastTimeHack = 0;
+    assert(nanoSeconds > lastTimeHack);
+    lastTimeHack = nanoSeconds;
+    return nanoSeconds;
+}
 
-    // Prototypes
-    static void updateStats(timestamps_t *pData, Period_statistics_t *pStats);
+/**
+ * @brief Initialize the periodic timer
+ * 
+ */
+void Period_init(void) {
+    memset(s_eventData, 0, sizeof(s_eventData[0]) * NUM_PERIOD_EVENTS);
+    s_initialized = true;
+}
 
+/**
+ * @brief Cleanup the periodic timer
+ * 
+ */
+void Period_cleanup(void) {
+    // nothing
+    s_initialized = false;
+}
 
-
-
-    void Period_init(void) {
-        
-        memset(s_eventData, 0, sizeof(s_eventData[0]) * NUM_PERIOD_EVENTS);
-        s_initialized = true;
-
+/**
+ * @brief Mark an event in the periodic timer
+ * 
+ * @param whichEvent the event
+ */
+void Period_markEvent(Period_whichEvent whichEvent) {
+    
+    assert (whichEvent >= 0 && whichEvent < NUM_PERIOD_EVENTS);
+    assert (s_initialized);
+    timestamps_t *pData = &s_eventData[whichEvent];
+    pthread_mutex_lock(&s_lock);
+    
+    if (pData->timestampCount < MAX_EVENT_TIMESTAMPS) {
+        pData->timestampsInNs[pData->timestampCount] = getTimeInNanoS();
+        pData->timestampCount++;
+    } else {
+        printf("WARNING: No sample space for event collection on %d\n", whichEvent);
     }
+    
+    pthread_mutex_unlock(&s_lock);
+}
 
-    void Period_cleanup(void) {
-
-        // nothing
-        s_initialized = false;
-
-    }
-
-    void Period_markEvent(enum Period_whichEvent whichEvent) {
-        
-        assert (whichEvent >= 0 && whichEvent < NUM_PERIOD_EVENTS);
-        assert (s_initialized);
-
-        timestamps_t *pData = &s_eventData[whichEvent];
-        pthread_mutex_lock(&s_lock);
-        {
-            if (pData->timestampCount < MAX_EVENT_TIMESTAMPS) {
-                pData->timestampsInNs[pData->timestampCount] = getTimeInNanoS();
-                pData->timestampCount++;
-            } else {
-                printf("WARNING: No sample space for event collection on %d\n", whichEvent);
-            }
-        }
-        pthread_mutex_unlock(&s_lock);
-    }
-
-    void Period_getStatisticsAndClear(enum Period_whichEvent whichEvent, Period_statistics_t *pStats) {
+    void Period_getStatisticsAndClear(Period_whichEvent whichEvent, Period_statistics_t *pStats) {
         
         assert (whichEvent >= 0 && whichEvent < NUM_PERIOD_EVENTS);
         assert (s_initialized);
@@ -126,20 +147,4 @@
         pStats->maxPeriodInMs = maxNs / MS_PER_NS;
         pStats->avgPeriodInMs = avgNs / MS_PER_NS;
         pStats->numSamples = pData->timestampCount;
-    }
-
-    // // Timing function
-    static long long getTimeInNanoS(void) {
-
-        struct timespec spec;
-        clock_gettime(CLOCK_BOOTTIME, &spec);
-        long long seconds = spec.tv_sec;
-        long long nanoSeconds = spec.tv_nsec + seconds * 1000*1000*1000;
-        assert(nanoSeconds > 0);
-        
-        static long long lastTimeHack = 0;
-        assert(nanoSeconds > lastTimeHack);
-        lastTimeHack = nanoSeconds;
-
-        return nanoSeconds;
     }

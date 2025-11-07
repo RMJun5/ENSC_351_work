@@ -32,9 +32,9 @@
 // Thread control
 // static pthread_t samplerThread_id;
 
-static atomic_bool running = false;
-static int spi_fd = -1;
-static int adc_channel = 0;
+static atomic_bool running = false;       // Thread running flag
+static int spi_fd = -1;                   // SPI file descriptor
+static int adc_channel = 0;               // ADC channel
 static const double alpha = 0.999;        // EMA smoothing: 99.9% weight on previous
 static const int SAMPLE_INTERVAL_MS = 1;  // 1ms between samples
 
@@ -52,8 +52,8 @@ static Sampler samp = {
 static bool dip_detected = false;         // Dip detection state
 
 // Forward declaration of thread function
-static void* samplerThread(void* arg);
-static void sampler_moveCurrentDataToHistory(void);
+// static void* samplerThread(void* arg);
+// static void sampler_moveCurrentDataToHistory(void);
 
 
 /**
@@ -172,7 +172,11 @@ void sampler_getTimingStatistics(Period_statistics_t *pStats) {
     }
 }
 
-/* Get/clear total samples statistics*/
+/**
+ * @brief Get/clear total samples
+ * 
+ * @param pStats the struct to fill
+ */
 void sampler_getTotalsamples(Period_statistics_t *pStats) {
     if (pStats) {
         Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_FINAL, pStats);
@@ -207,7 +211,7 @@ double* sampler_getHistory(int*size ) {
  * 
  * @return the number of samples taken
  */
-long long sampler_getNumsamplesTaken(){
+long long sampler_getNumSamplesTaken(){
     // printf("Total number of samples: %d", samp.stats.total);
     // return samp.stats.total;
     pthread_mutex_lock(&samp.lock);
@@ -335,7 +339,7 @@ int sampler_getHistDips(){
     dip_detected = false;
     double latestSample = samp.buffer.samples[samp.buffer.size];
 
-    enum DIP_EVENTS state = ARMED;
+    DIP_EVENTS state = ARMED;
 
     for (int i = 0; i < n; i++){
         // const double samples= hist[i];
@@ -352,7 +356,7 @@ int sampler_getHistDips(){
         }
     }
     free(hist);
-    samp.history.dips = dips; // maybe not needed
+    //samp.history.dips = dips; // maybe not needed
     return dips;
 }
 
@@ -366,7 +370,7 @@ void* samplerThread(void* arg) {
 
     (void)arg;  // unused
     
-    int fd = open(DEV_PATH, O_RDWR);
+    int fd = spi_fd;
     if (fd < 0) {
         perror("open ADC device");
         return NULL;

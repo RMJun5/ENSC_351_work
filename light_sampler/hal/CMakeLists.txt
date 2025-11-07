@@ -7,6 +7,12 @@ file(GLOB MY_SOURCES "src/*.c")
 
 add_library(hal STATIC ${MY_SOURCES})
 
+# Add periodtimer.h
+target_include_directories(hal
+    BEFORE
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
 # --- Find libgpiod ---
 find_package(PkgConfig REQUIRED)

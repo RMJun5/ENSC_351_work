@@ -1,7 +1,9 @@
-#include "periodTimer.h"
-#include "hal/sensor.h" 
-#include "hal/timing.h"
+#include "hal/periodTimer.h"
+#include "hal/sampler.h" 
+#include "hal/UDP.h"
+#include "hal/encoder.h"
 #include "hal/led.h"
+#include "hal/encoder.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -33,40 +35,83 @@ bool timeElapsed(){
 
 
 int main() {
-    Period_init(); 
 
+    // Initialize hardware & modules
+    Period_init();
     led_init();
-    led_set_parameters(1000000000, 500000); // 1 second period, 50% duty cycle
-    
-    // store history in a text file
-    // Make sure you change the permissions of the light_sampler directory ($ chmod a+rw light_sampler/)
+    led_set_parameters(1000000000, 500000); // 1s period, 50% duty
+
+    sampler_init();     // initialize sampler once
+    UDP_start();        // start UDP server
+    Period_init();      // initialize period timer
+
     FILE* fileID = fopen("history.txt", "w");
-    if (fileID == NULL) {
-        perror("Error opening file");
+    if (!fileID) {
+        perror("fopen history.txt");
         return 1;
     }
 
     for (int i = 0; i < 1000; i++) {
-   
-    int size = getHistorySize();
+        // wait 100ms
+        usleep(100000);
 
+        // get current reading
+        double reading = sampler_getCurrentReading();
+        fprintf(fileID, "%.3f, ", reading);
 
-        Period_markEvent(PERIOD_EVENT_SAMPLE_LIGHT);
-        // Read the light sensor
-        fprintf(fileID, "%d, ", sensor_read());
-        sleep((unsigned)0.1);   
-
+        // every 1s: rotate history and mark event
+        static int counter = 0;
+        counter++;
+        if (counter >= 10) { // 10 * 0.1s = 1s
+            Period_markEvent(PERIOD_EVENT_SAMPLE_FINAL);
+            counter = 0;
+        }
     }
-    printf("Light sensor thread statistics:\n");
-    printf("  Num samples: %d\n", stats.numSamples);
+
+    // Print statistics
+    Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_LIGHT, &stats);
+    printf("Light sensor statistics:\n");
+    printf("  Num samples: %lld\n", sampler_getNumSamplesTaken());
+    printf("  Avg period (ms): %.3f\n", stats.avgPeriodInMs);
     printf("  Min period (ms): %.3f\n", stats.minPeriodInMs);
     printf("  Max period (ms): %.3f\n", stats.maxPeriodInMs);
-    printf("  Avg period (ms): %.3f\n", stats.avgPeriodInMs);
 
-    Period_markEvent(PERIOD_EVENT_MARK_SECOND);
-    Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_LIGHT, &stats);
-    Period_cleanup();
+    // Cleanup
     fclose(fileID);
+    UDP_stop();
+    sampler_cleanup();
+    Period_cleanup();
     led_cleanup();
-    return 0;
+    
+    // // store history in a text file
+    // // Make sure you change the permissions of the light_sampler directory ($ chmod a+rw light_sampler/)
+    // FILE* fileID = fopen("history.txt", "w");
+    // if (fileID == NULL) {
+    //     perror("Error opening file");
+    //     return 1;
+    // }
+
+    // for (int i = 0; i < 1000; i++) {
+   
+    //     int size = sampler_getHistorySize();
+
+    //     Period_markEvent(PERIOD_EVENT_SAMPLE_LIGHT);
+    //     // Read the light sensor
+    //     fprintf(fileID, "%d, ", sampler_init());
+    //     sleep((unsigned)0.1);   
+
+    // }
+    
+    // printf("Light sensor thread statistics:\n");
+    // printf("  Num samples: %d\n", stats.numSamples);
+    // printf("  Min period (ms): %.3f\n", stats.minPeriodInMs);
+    // printf("  Max period (ms): %.3f\n", stats.maxPeriodInMs);
+    // printf("  Avg period (ms): %.3f\n", stats.avgPeriodInMs);
+
+    // Period_markEvent(PERIOD_EVENT_MARK_SECOND);
+    // Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_LIGHT, &stats);
+    // Period_cleanup();
+    // fclose(fileID);
+    // led_cleanup();
+    // return 0;
 }

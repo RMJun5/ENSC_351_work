@@ -7,14 +7,14 @@ add_executable(out ${MY_SOURCES})
 target_include_directories(out PRIVATE
    ${CMAKE_CURRENT_SOURCE_DIR}/include   # app headers
    ${CMAKE_SOURCE_DIR}/hal/include       # HAL headers
-   ${GPIOD_INCLUDE_DIRS}              # libgpiod from sysroot
+   ${LIBGPIOD_INCLUDE_DIRS}              # libgpiod from sysroot
 
 )
 
 # Make use of the HAL library
 target_link_libraries(out LINK_PRIVATE 
    hal
-   ${GPIOD_LIBRARIES}
+   ${LIBGPIOD_LIBRARIES}
 )
 
 # --- Compiler warnings / sanitizers ---

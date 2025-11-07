@@ -95,14 +95,25 @@
 #define DEV_MODE 0
 #define DEV_BITS 8
 #define DEV_SPEED 250000
+#define DEV_ADC_CH 0
+
+// Sampling
+#define SAMPLE_INTERVAL 1               // 1 ms
 #define MAX_SAMPLESPERSECOND 1000
 #define MAX_ADCVALUE 4095.0
-#define MAX_SAMPLE_SIZE (MAX_SAMPLES_PER_SECOND + 0.1*MAX_SAMPLES_PER_SECOND) // buffer for 10% overhead
+//#define MAX_SAMPLE_SIZE (MAX_SAMPLES_PER_SECOND + 0.1*MAX_SAMPLES_PER_SECOND) // buffer for 10% overhead
+
+// Dip threshold volts
+#define DIP_TRIG_V 0.10
+#define DIP_REARM_V 0.07
+
+// Dip threshold bits
 #define DIP_TRIG 124 
 #define DIP_REARM 87
 
 // Use the light sensor to read current light level.
 typedef struct {
+
     struct {
         double* samples;
         int size;
@@ -121,12 +132,14 @@ typedef struct {
     pthread_t threadID;
     pthread_mutex_t lock;
     bool initialized;
+
 } Sampler;
 
-enum DIP_EVENTS {
+typedef enum {
     ARMED,
     DIPPING
-};
+} DIP_EVENTS;
+
 // Setup light
 void sampler_init();
 

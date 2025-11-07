@@ -7,7 +7,7 @@
 #define ENCODER_H
 
 
-//#include <gpiod.h>
+#include <gpiod.h>
 #include <stdio.h>
 
 
