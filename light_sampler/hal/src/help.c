@@ -1,3 +1,6 @@
+#define _GNU_SOURCE
+#define _POSIX_C_SOURCE 200809L
+
 #include "hal/help.h"
 #include <time.h>
 #include <stdio.h>
@@ -13,6 +16,7 @@
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
 #include <ctype.h>
+#include <errno.h>
 
 
 static double max_adc = 4095.0; 

@@ -117,16 +117,16 @@ typedef struct {
     struct {
         double* samples;
         int size;
-    } curr; // curr
-
+    } buffer;
     struct{
         double* samples;
         int size;
-        //int dips;
+        int dips;
     } hist;
-
+    
     struct {
         double avg;
+        long long totalSamplesTaken;
         long long totalSamplesTaken;
     } stats;
     

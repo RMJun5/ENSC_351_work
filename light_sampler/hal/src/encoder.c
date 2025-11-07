@@ -22,7 +22,7 @@ void read_encoder() {
     printf("%s", "Chip opened");
     
     // // Get the specific GPIO line
-    line = gpiod_line_request_get_fd(chip, 23);
+    line = gpiod_chip_get_line(chip, 23);
     if (line == NULL){
         perror("Cannot fetch line");
         gpiod_chip_close(chip);
