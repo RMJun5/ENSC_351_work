@@ -6,10 +6,9 @@
     #include <string.h>
     #include <stdlib.h>
 
-    #include "hal/include/periodTimer.h"
+    #include "hal/periodTimer.h"
 
     // Written by Brian Fraser
-
 
 
     // Data collected
@@ -129,7 +128,7 @@
         pStats->numSamples = pData->timestampCount;
     }
 
-    // Timing function
+    // // Timing function
     static long long getTimeInNanoS(void) {
 
         struct timespec spec;

@@ -6,44 +6,92 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <string.h>
+const uint32_t MAX_PERIOD = 469754879;
 
 static bool led_initialized = false;
 
-
+/**
+ * @brief Initializes the led. Should only be called once
+ */
 void led_init() {
-    system ("sudo beagle-pwm-export --pin hat-32");
-    usleep(100000); // wait for 100 ms to ensure the PWM device is ready
-    
     if (led_initialized) {
         fprintf(stderr, "LED already initialized\n");
         return;
     }
+
+    // Export the PWM pin
+    system ("sudo beagle-pwm-export --pin hat-32");
+    usleep(100000); // wait for 100 ms to ensure the PWM device is ready
+    
     led_initialized = true;
 }
 
+/**
+ * @brief Sets the LED parameters
+ * 
+ * @param period_ns the period in nanoseconds
+ * @param duty_cycle_ns the duty cycle in nanoseconds
+ */
 void led_set_parameters(uint32_t period_ns, uint32_t duty_cycle_ns) {
-    if (0 < period_ns) {
-        period_ns = 0; 
-    } else if (period_ns > (uint8_t)469754879) {
-        period_ns = 469754879;
+   
+    if (!led_initialized) {
+        fprintf(stderr, "LED not initialized\n");
+        return;
     }
-    if (duty_cycle_ns < period_ns) {
+
+
+    // The original if (0 < period_ns) { period_ns = 0; } makes no sense.
+    // Correct logic is: ensure valid nonzero period and duty cycle < period.
+    if (period_ns == 0) {
+        fprintf(stderr, "Invalid period (cannot be 0)\n");
+        return;
+    }
+
+    // if (0 < period_ns) {
+    //     period_ns = 0; 
+    // } else if (period_ns > (uint8_t)469754879) {
+    //     period_ns = 469754879;
+    // }
+
+    // Clamp period to hardware max if necessary
+    if (period_ns > MAX_PERIOD) {
+        period_ns = MAX_PERIOD;
+    }
+
+    // Clamp duty cycle to period
+    if (duty_cycle_ns > period_ns) {
         duty_cycle_ns = period_ns;
     }
 
+    // if (duty_cycle_ns < period_ns) {
+    //     duty_cycle_ns = period_ns;
+    // }
+
     char buffer[32];
-    sprintf(buffer, "%u", period_ns);
+
+    // Write period and duty cycle to the file
+    snprintf(buffer, sizeof(buffer), "%u", period_ns);
     write2file(PWM_PATH_PERIOD, buffer);
+    // sprintf(buffer, "%u", period_ns);
+    // write2file(PWM_PATH_PERIOD, buffer);
 
-    sprintf(buffer, "%u", duty_cycle_ns);
+    snprintf(buffer, sizeof(buffer), "%u", duty_cycle_ns);
     write2file(PWM_PATH_DUTY_CYCLE, buffer);
+    // sprintf(buffer, "%u", duty_cycle_ns);
+    // write2file(PWM_PATH_DUTY_CYCLE, buffer);
 
+
+    // Enable the PWM
     write2file(PWM_PATH_ENABLE, "1");
     // write2file(PWM_PATH_PERIOD, period_ns);
     // write2file(PWM_PATH_DUTY_CYCLE, duty_cycle_ns);
     // write2file(PWM_PATH_ENABLE, "1");
 }
 
+/**
+ * @brief Cleans up the led
+ * 
+ */
 void led_cleanup() {
     if (!led_initialized) {
         fprintf(stderr, "LED not initialized\n");
