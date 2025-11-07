@@ -122,7 +122,7 @@ typedef struct {
         double* samples;
         int size;
         int dips;
-    } hist;
+    } history;
     
     struct {
         double avg;
