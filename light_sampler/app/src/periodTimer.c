@@ -6,7 +6,7 @@
     #include <string.h>
     #include <stdlib.h>
 
-    #include "hal/periodTimer.h"
+    #include "periodTimer.h"
 
     // Written by Brian Fraser
 
