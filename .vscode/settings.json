@@ -9,7 +9,14 @@
         "help.h": "c",
         "stdbool.h": "c",
         "string.h": "c",
-        "pthread.h": "c"
+        "pthread.h": "c",
+        "ctype.h": "c",
+        "sampler.h" : "c",
+        "UDP.h" : "c",
+        "arpa/inet.h": "c",
+        "netinet/in.h":"c",
+        "sys/select.h": "c",
+        "sys/socket.h": "c"
     },
     "cmake.sourceDirectory": "C:/Users/richa/OneDrive/Documents/GitHub/ENSC_351_work/Assignment_1"
 }
