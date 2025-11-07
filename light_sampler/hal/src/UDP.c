@@ -55,7 +55,7 @@ void send_text(int socket, const struct sockaddr_in *client, socklen_t clen, con
         if (cut == 0 || cut > chunk){
             cut = chunk;
         }
-        (void) sendto(sock,cursor,cut,0,(const struct sockaddr*)client, clen);
+        (void) sendto(socket,cursor,cut,0,(const struct sockaddr*)client, clen);
         cursor += cut;
         len -= cut;
     }
@@ -73,7 +73,10 @@ void UDP_help (int sock, const struct sockaddr_in *client, socklen_t clen){
                       "<enter>(a blank input) - repeats last command"};
     
     printf("Available commands:\n"); 
-    send_text(sock, client, clen, help);
+    for (int i = 0; i < sizeof(help); i++){
+        send_text(sock, client, clen, help[i]);
+    }
+    // send_text(sock, client, clen, help);
 }
 void UDP_question (int sock, const struct sockaddr_in *client,socklen_t clen){
     UDP_help(sock, client, clen);
@@ -82,19 +85,19 @@ void UDP_count(int sock, const struct sockaddr_in *client,socklen_t clen){
     long long n = sampler_getNumSamplesTaken();
     char countbuf[128];
     int m = snprintf(countbuf,sizeof(countbuf), "# samples taken total: %lld\n", n);
-    if (m) send_text(sock, client, clen, countbuf);
+    if (m) {send_text(sock, client, clen, countbuf);}
 }
 void UDP_length(int sock, const struct sockaddr_in *client,socklen_t clen){
     int n = sampler_getHistorySize();
     char lengthbuf[128];
     int m = snprintf(lengthbuf, sizeof(lengthbuf), "# of samples taken last second: %d \n", n);
-    if(m) send_text(sock, client, clen, lengthbuf);
+    if(m) {send_text(sock, client, clen, lengthbuf);}
 }
 void UDP_dips(int sock, const struct sockaddr_in *client,socklen_t clen){
     int d = sampler_getHistDips();
     char dipbuf[128];
     int m = snprintf(dipbuf, sizeof(dipbuf), "# of samples taken last second: %d \n", d);
-    if (m) send_text(sock, client,clen, dipbuf)
+    if (m) {send_text(sock, client,clen, dipbuf);}
 }
 void UDP_history(int sock, const struct sockaddr_in *client, double* hist, socklen_t clen) {
     /* Send the last-second history as voltages, 10 values per line, 3 decimals.
