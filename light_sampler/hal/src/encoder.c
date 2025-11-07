@@ -1,6 +1,5 @@
 #define _GNU_SOURCE
 #include "hal/encoder.h"
-#include <gpiod.h>
 
 unsigned int line_offset = 16;      // The offset of the GPIO line you want to control (e.g., GPIO16)
 struct gpiod_chip *chip;
@@ -10,6 +9,11 @@ struct gpiod_chip_info *info;
 struct gpiod_line_request *request;
 const char *CHIPNAME = "/dev/gpiochip0"; // Typically the name of your GPIO chip
 
+
+/**
+ * @brief Reads the encoder
+ * 
+ */
 void read_encoder() {
  
     // // open the gpiochip0
@@ -39,3 +43,4 @@ void read_encoder() {
 
     // return NONE;
 }
+

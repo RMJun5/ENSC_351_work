@@ -16,14 +16,14 @@ pkg_check_modules(LIBGPIOD REQUIRED libgpiod)
 target_include_directories(hal
     BEFORE
     PUBLIC
-        ${LIBGPIOD_INCLUDE_DIRS}
+        ${GPIOD_INCLUDE_DIRS}
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 # --- Link against libgpiod ---
 target_link_libraries(hal
     PUBLIC 
-        ${LIBGPIOD_LIBRARIES}
+        ${GPIOD_LIBRARIES}
         m          # libm for math functions
         pthread    # pthread
 )
