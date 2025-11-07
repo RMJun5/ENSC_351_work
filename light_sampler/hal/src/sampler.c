@@ -74,7 +74,6 @@ void sampler_init() {
 
     /* Signal the worker thread to run */
     // atomic_store_explicit(&running, true, memory_order_release);
-    // Period_init();
     // pthread_attr_t attr;
     // pthread_attr_init(&attr);
 
@@ -94,7 +93,6 @@ void sampler_init() {
     //     perror("sampler_init(): failed to read adc channel");
     //     exit(-1);
     // }
-    Period_init();
     atomic_store(&running, true);
     samp.initialized = true;
 
@@ -136,7 +134,6 @@ void sampler_cleanup() {
     samp.history.size = 0;
     pthread_mutex_unlock(&samp.lock);
 
-    Period_cleanup();
     samp.initialized = false;
 
     /* Free buffers under the sampler lock */
@@ -234,8 +231,8 @@ double sampler_getCurrentReading() {
 
     double adcVal = read_adc_ch(fd, adc_channel, DEV_SPEED);
 
-    // while(samp.initialized) {
-    //     double adcVal = read_adc_ch(adc_channel, DEV_SPEED, DEV_BITS); // int read_adc_ch(int fd, int ch, uint32_t speed_hz)
+     while(samp.initialized) {
+         double adcVal = read_adc_ch(adc_channel, DEV_SPEED, DEV_BITS); // int read_adc_ch(int fd, int ch, uint32_t speed_hz)
             if (adcVal < 0) {
                 fprintf(stderr,"sampler_getCurrentReading(): ADC read faileds\n returning error value -1 ");
                 sleep_ms(100);
@@ -245,19 +242,18 @@ double sampler_getCurrentReading() {
             adcVal = MAX_ADCVALUE;
         } 
         return adcVal;
-        // pthread_mutex_lock(&samp.lock);
-        // if (curr.size < MAX_SAMPLE_SIZE){
-        //    curr.samples[curr.size] = adcVal;
-        //    curr.size ++;
-        // } else {
-        //     printf("sampler_getCurrentReading(): buffer full/sample size too big
-        //             \n returning error value -1");
-        //     sampler_cleanup();
-        //     return -1;
-        // }
-        // pthread_mutex_unlock(& lock);
-        // return adcVal;
-    //}
+        pthread_mutex_lock(&samp.lock);
+        if (samp.buffer.size < MAX_SAMPLESPERSECOND){
+            samp.buffer.samples[samp.buffer.size] = adcVal;
+            samp.buffer.size ++;
+         } else {
+             printf("sampler_getCurrentReading(): buffer full/sample size too big \n returning error value -1");
+             sampler_cleanup();
+             return -1;
+         }
+        pthread_mutex_unlock(& samp.lock);
+        return adcVal;
+    }
 }
 
 /**
@@ -421,9 +417,8 @@ void* samplerThread(void* arg) {
             samp.buffer.samples[samp.buffer.size++] = adcVal;
         }
         
-        // Mark event for timing analysis
-        // Period_markEvent(PERIOD_EVENT_SAMPLE_LIGHT);
-        
+        Period_init();
+
         pthread_mutex_unlock(&samp.lock);
         
         // Mark event for timing analysis
