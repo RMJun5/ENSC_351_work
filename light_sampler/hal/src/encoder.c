@@ -1,4 +1,4 @@
-
+#define _GNU_SOURCE
 #include "hal/encoder.h"
 #include <gpiod.h>
 
@@ -8,7 +8,7 @@ struct gpiod_line *line;
 int num;
 struct gpiod_chip_info *info;
 struct gpiod_line_request *request;
-const char *CHIPNAME = "gpiochip0"; // Typically the name of your GPIO chip
+const char *CHIPNAME = "/dev/gpiochip0"; // Typically the name of your GPIO chip
 
 void read_encoder() {
  
@@ -19,15 +19,16 @@ void read_encoder() {
         gpiod_chip_close(chip);
         return;
     }
+    printf("%s", "Chip opened");
     
     // // Get the specific GPIO line
-    info = gpiod_chip_get_info(chip);
+    line = gpiod_line_request_get_fd(chip, 23);
     if (line == NULL){
         perror("Cannot fetch line");
         gpiod_chip_close(chip);
         return;
     }
-
+    printf("%s", "Got the chips info");
 
     // Direction direction;
     // if (0) {}

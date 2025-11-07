@@ -22,7 +22,10 @@ target_include_directories(hal
 
 # --- Link against libgpiod ---
 target_link_libraries(hal
-    PUBLIC ${LIBGPIOD_LIBRARIES}
+    PUBLIC 
+        ${LIBGPIOD_LIBRARIES}
+        m          # libm for math functions
+        pthread    # pthreads
 )
 
 # --- Diagnostics ---
