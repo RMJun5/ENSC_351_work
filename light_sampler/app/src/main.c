@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "hal/periodTimer.h"
 #include "hal/sampler.h" 
 #include "hal/UDP.h"
@@ -37,6 +38,7 @@ bool timeElapsed(){
 int main() {
 
     // Initialize hardware & modules
+    read_encoder();
     Period_init();
     led_init();
     led_set_parameters(1000000000, 500000); // 1s period, 50% duty
@@ -45,19 +47,12 @@ int main() {
     UDP_start();        // start UDP server
     Period_init();      // initialize period timer
 
-    FILE* fileID = fopen("history.txt", "w");
-    if (!fileID) {
-        perror("fopen history.txt");
-        return 1;
-    }
-
     for (int i = 0; i < 1000; i++) {
         // wait 100ms
         usleep(100000);
 
         // get current reading
         double reading = sampler_getCurrentReading();
-        fprintf(fileID, "%.3f, ", reading);
 
         // every 1s: rotate history and mark event
         static int counter = 0;
@@ -113,5 +108,5 @@ int main() {
     // Period_cleanup();
     // fclose(fileID);
     // led_cleanup();
-    // return 0;
+    return 0;
 }
