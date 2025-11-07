@@ -17,7 +17,6 @@
 #define BUFF_SIZE 2048
 // Stay under 1500 bytes (Ethernet MTU). Leave headroom for IP/UDP headers and our text.
 #define CHUNK_LIM 1400
-#define SEND_CHUNK_LIM 1400
 
 typedef struct {
     int sock;

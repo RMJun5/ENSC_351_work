@@ -137,6 +137,7 @@ void send_text(const char *text ){
         if (cut == 0 || cut > chunk){
             cut = chunk;
         }
+        if (clen == 0 || udp.sock < 0) return;
         (void) sendto(udp.sock,cursor,cut,0,&client , clen);
         cursor += cut;
         len -= cut;
