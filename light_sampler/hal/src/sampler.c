@@ -39,7 +39,7 @@ void sampler_init() {
 
     samp.initialized = true;
 
-    samp.curr.samples = malloc(sizeof(double) * MAX_samplesPERSECOND);
+    samp.curr.samples = malloc(sizeof(double) * MAX_SAMPLESPERSECOND);
     if (!samp.curr.samples) {
         perror("sampler_init(): malloc failed");
         exit(-1);

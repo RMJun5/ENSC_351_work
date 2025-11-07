@@ -1,5 +1,4 @@
 #include "hal/help.h"
-
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +11,7 @@
 #include <stdbool.h>
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
+#include <ctype.h>
 
 
 static double max_adc = 4095.0; 
@@ -105,18 +105,18 @@ void sleep_ms(long long ms){
     nanosleep(&reqDelay,(struct timespec *)NULL);
 }
 
-double nanotoms (int ns){
-    double ms = (double)ns / 1000000.0;
-    return ms;
-}
-long long getTimeInMs(void) {
-    struct timespec spec;
-    clock_gettime(CLOCK_REALTIME, &spec);
-    long long seconds = (long long)spec.tv_sec;
-    long long nanoSeconds = (long long)spec.tv_nsec;
-    long long milliSeconds = seconds * 1000LL + nanoSeconds / 1000000LL;
-    return milliSeconds;
-}
+// double nanotoms (int ns){
+//     double ms = (double)ns / 1000000.0;
+//     return ms;
+// }
+// long long getTimeInMs(void) {
+//     struct timespec spec;
+//     clock_gettime(CLOCK_REALTIME, &spec);
+//     long long seconds = (long long)spec.tv_sec;
+//     long long nanoSeconds = (long long)spec.tv_nsec;
+//     long long milliSeconds = seconds * 1000LL + nanoSeconds / 1000000LL;
+//     return milliSeconds;
+// }
 
 static void sanitize_line(char *s)
 {

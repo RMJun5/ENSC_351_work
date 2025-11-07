@@ -7,24 +7,21 @@
 #define ENCODER_H
 
 
-#include <gpiod.h>
+//#include <gpiod.h>
 #include <stdio.h>
 
-#define CHIPNAME "gpiochip0" // Typically the name of your GPIO chip
 
-enum Direction 
-{
+
+typedef enum {
     LEFT,
     RIGHT,
     UP,
     DOWN,
     NONE
-
-};
-
+}Direction;
 
 // Use the rotary encoder to control how fast the LED blinks (using PWM).
 // This LED emitter is designed to flash directly at the “detector” light sensor.
-Direction read_encoder();
+void read_encoder();
 
 #endif

@@ -1,5 +1,8 @@
 #ifndef _HELP_H_
 #define _HELP_H_
+#include <stdint.h>
+#include "periodTimer.h"
+
 void write2file(const char *path, const char *value);
 int devRead(const char *path, uint8_t mode, uint8_t bits, uint32_t speed);
 Period_statistics_t printStatistics(enum Period_whichEvent Event);

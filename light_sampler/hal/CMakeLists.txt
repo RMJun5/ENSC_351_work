@@ -14,9 +14,10 @@ pkg_check_modules(LIBGPIOD REQUIRED libgpiod)
 
 # --- Include directories ---
 target_include_directories(hal
+    BEFORE
     PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${LIBGPIOD_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 # --- Link against libgpiod ---
