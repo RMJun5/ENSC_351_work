@@ -155,7 +155,10 @@ void UDP_help (void){
                       "<enter>(a blank input) - repeats last command"};
     
     printf("Available commands:\n"); 
-    send_text(help);
+    for (int i = 0; i < sizeof(help); i++){
+        send_text(sock, client, clen, help[i]);
+    }
+    // send_text(help);
 }
 void UDP_question (void){
     UDP_help(udp.sock, client, clen);
