@@ -82,36 +82,4 @@ int main() {
     sampler_cleanup();
     Period_cleanup();
     led_cleanup();
-    
-    // // store history in a text file
-    // // Make sure you change the permissions of the light_sampler directory ($ chmod a+rw light_sampler/)
-    // FILE* fileID = fopen("history.txt", "w");
-    // if (fileID == NULL) {
-    //     perror("Error opening file");
-    //     return 1;
-    // }
-
-    // for (int i = 0; i < 1000; i++) {
-   
-    //     int size = sampler_getHistorySize();
-
-    //     Period_markEvent(PERIOD_EVENT_SAMPLE_LIGHT);
-    //     // Read the light sensor
-    //     fprintf(fileID, "%d, ", sampler_init());
-    //     sleep((unsigned)0.1);   
-
-    // }
-    
-    // printf("Light sensor thread statistics:\n");
-    // printf("  Num samples: %d\n", stats.numSamples);
-    // printf("  Min period (ms): %.3f\n", stats.minPeriodInMs);
-    // printf("  Max period (ms): %.3f\n", stats.maxPeriodInMs);
-    // printf("  Avg period (ms): %.3f\n", stats.avgPeriodInMs);
-
-    // Period_markEvent(PERIOD_EVENT_MARK_SECOND);
-    // Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_LIGHT, &stats);
-    // Period_cleanup();
-    // fclose(fileID);
-    // led_cleanup();
-    // return 0;
 }
