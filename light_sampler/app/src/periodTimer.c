@@ -1,69 +1,84 @@
-    #define _POSIX_C_SOURCE 200809L 
-    #include <assert.h>
-    #include <pthread.h>
-    #include <stdio.h>
-    #include <stdbool.h>
-    #include <string.h>
-    #include <stdlib.h>
+#define _POSIX_C_SOURCE 200809L 
+#include <assert.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
+#include "hal/periodTimer.h"
+// Written by Brian Fraser
+// Data collected
 
-    #include "hal/periodTimer.h"
+typedef struct {
+    long timestampCount;                             // Store the timestamp samples each time we mark an event.
+    long long timestampsInNs[MAX_EVENT_TIMESTAMPS];
+    long long prevTimestampInNs;                     // Used for recording the event between analysis periods.
+} timestamps_t;
 
-    // Written by Brian Fraser
+static timestamps_t s_eventData[NUM_PERIOD_EVENTS];  // Data for each event
+static pthread_mutex_t s_lock = PTHREAD_MUTEX_INITIALIZER;  // Lock for accessing data
+static bool s_initialized = false;                          // Initialization flag
 
+// Prototypes
+static void updateStats(timestamps_t *pData, Period_statistics_t *pStats);
 
-    // Data collected
-    typedef struct {
-        // Store the timestamp samples each time we mark an event.
-        long timestampCount;
-        long long timestampsInNs[MAX_EVENT_TIMESTAMPS];
+/**
+ * @brief Returns the current time in nanoseconds
+ * 
+ * @return long long 
+ */
+static long long getTimeInNanoS(void) {
+    struct timespec spec;
+    clock_gettime(CLOCK_BOOTTIME, &spec);
+    long long seconds = spec.tv_sec;
+    long long nanoSeconds = spec.tv_nsec + seconds * 1000*1000*1000;
+    assert(nanoSeconds > 0);
+    
+    static long long lastTimeHack = 0;
+    assert(nanoSeconds > lastTimeHack);
+    lastTimeHack = nanoSeconds;
+    return nanoSeconds;
+}
 
-        // Used for recording the event between analysis periods.
-        long long prevTimestampInNs;
-    } timestamps_t;
+/**
+ * @brief Initialize the periodic timer
+ * 
+ */
+void Period_init(void) {
+    memset(s_eventData, 0, sizeof(s_eventData[0]) * NUM_PERIOD_EVENTS);
+    s_initialized = true;
+}
 
-    static timestamps_t s_eventData[NUM_PERIOD_EVENTS];
+/**
+ * @brief Cleanup the periodic timer
+ * 
+ */
+void Period_cleanup(void) {
+    // nothing
+    s_initialized = false;
+}
 
-    static pthread_mutex_t s_lock = PTHREAD_MUTEX_INITIALIZER;
-    static bool s_initialized = false;
-
-
-    // Prototypes
-    static void updateStats(timestamps_t *pData, Period_statistics_t *pStats);
-
-
-
-
-    void Period_init(void) {
-        
-        memset(s_eventData, 0, sizeof(s_eventData[0]) * NUM_PERIOD_EVENTS);
-        s_initialized = true;
-
+/**
+ * @brief Mark an event in the periodic timer
+ * 
+ * @param whichEvent the event
+ */
+void Period_markEvent(enum Period_whichEvent whichEvent) {
+    
+    assert (whichEvent >= 0 && whichEvent < NUM_PERIOD_EVENTS);
+    assert (s_initialized);
+    timestamps_t *pData = &s_eventData[whichEvent];
+    pthread_mutex_lock(&s_lock);
+    
+    if (pData->timestampCount < MAX_EVENT_TIMESTAMPS) {
+        pData->timestampsInNs[pData->timestampCount] = getTimeInNanoS();
+        pData->timestampCount++;
+    } else {
+        printf("WARNING: No sample space for event collection on %d\n", whichEvent);
     }
-
-    void Period_cleanup(void) {
-
-        // nothing
-        s_initialized = false;
-
-    }
-
-    void Period_markEvent(enum Period_whichEvent whichEvent) {
-        
-        assert (whichEvent >= 0 && whichEvent < NUM_PERIOD_EVENTS);
-        assert (s_initialized);
-
-        timestamps_t *pData = &s_eventData[whichEvent];
-        pthread_mutex_lock(&s_lock);
-        {
-            if (pData->timestampCount < MAX_EVENT_TIMESTAMPS) {
-                pData->timestampsInNs[pData->timestampCount] = getTimeInNanoS();
-                pData->timestampCount++;
-            } else {
-                printf("WARNING: No sample space for event collection on %d\n", whichEvent);
-            }
-        }
-        pthread_mutex_unlock(&s_lock);
-    }
+    
+    pthread_mutex_unlock(&s_lock);
+}
 
     void Period_getStatisticsAndClear(enum Period_whichEvent whichEvent, Period_statistics_t *pStats) {
         
@@ -126,20 +141,4 @@
         pStats->maxPeriodInMs = maxNs / MS_PER_NS;
         pStats->avgPeriodInMs = avgNs / MS_PER_NS;
         pStats->numSamples = pData->timestampCount;
-    }
-
-    // // Timing function
-    static long long getTimeInNanoS(void) {
-
-        struct timespec spec;
-        clock_gettime(CLOCK_BOOTTIME, &spec);
-        long long seconds = spec.tv_sec;
-        long long nanoSeconds = spec.tv_nsec + seconds * 1000*1000*1000;
-        assert(nanoSeconds > 0);
-        
-        static long long lastTimeHack = 0;
-        assert(nanoSeconds > lastTimeHack);
-        lastTimeHack = nanoSeconds;
-
-        return nanoSeconds;
     }

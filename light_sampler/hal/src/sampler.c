@@ -33,17 +33,17 @@
 // Thread control
 // static pthread_t samplerThread_id;
 
-static atomic_bool running = false;
-static int spi_fd = -1;
-static int adc_channel = 0;
+static atomic_bool running = false;       // Thread running flag
+static int spi_fd = -1;                   // SPI file descriptor
+static int adc_channel = 0;               // ADC channel
 static const double alpha = 0.999;        // EMA smoothing: 99.9% weight on previous
 static const int SAMPLE_INTERVAL_MS = 1;  // 1ms between samples
 
 
 // Main sampler state
 static Sampler samp = {
-    .buffer = {NULL, 0},                    // Current second's samples
-    .hist = {NULL, 0, 0},                   // Previous second's history and dip count
+    .curr = {NULL, 0},                    // Current second's samples
+    .hist = {NULL, 0},                   // Previous second's history and dip count
     .stats = {0.0, 0},                      // EMA and total samples
     .lock = PTHREAD_MUTEX_INITIALIZER,      // Protects all shared state
     .initialized = false                    // Initialization flag
@@ -53,8 +53,8 @@ static Sampler samp = {
 static bool dip_detected = false;         // Dip detection state
 
 // Forward declaration of thread function
-static void* samplerThread(void* arg);
-static void sampler_moveCurrentDataToHistory(void);
+// static void* samplerThread(void* arg);
+// static void sampler_moveCurrentDataToHistory(void);
 
 
 /**
@@ -176,7 +176,11 @@ void sampler_getTimingStatistics(Period_statistics_t *pStats) {
     }
 }
 
-/* Get/clear total samples statistics*/
+/**
+ * @brief Get/clear total samples
+ * 
+ * @param pStats the struct to fill
+ */
 void sampler_getTotalsamples(Period_statistics_t *pStats) {
     if (pStats) {
         Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_FINAL, pStats);
@@ -339,24 +343,24 @@ int sampler_getHistDips(){
     int dips = 0;
     dip_detected = false;
 
-    enum DIP_EVENTS state = ARMED;
+    DIP_EVENTS state = ARMED;
 
     for (int i = 0; i < n; i++){
         // const double samples= hist[i];
         // currEma = sampler_getAverageReading(samples);
         currEma = sampler_getAverageReading(hist[i]);
         // if (samples<= currEma-DIP_TRIG){
-        if (!dip_detected && samples <= currEma - DIP_TRIG){
+        if (!dip_detected && hist[i] <= currEma - DIP_TRIG){
             dip_detected = true;
             state = DIPPING;
             dips++;
-        } else if (dip_detected && samples >= currEma-DIP_REARM){
+        } else if (dip_detected && hist[i] >= currEma-DIP_REARM){
             dip_detected = false;
             state = ARMED;
         }
     }
     free(hist);
-    samp.hist.dips = dips; // maybe not needed
+    //samp.hist.dips = dips; // maybe not needed
     return dips;
 }
 
@@ -370,7 +374,7 @@ void* samplerThread(void* arg) {
 
     (void)arg;  // unused
     
-    int fd = open(ADC_DEVICE, O_RDWR);
+    int fd = spi_fd;
     if (fd < 0) {
         perror("open ADC device");
         return NULL;

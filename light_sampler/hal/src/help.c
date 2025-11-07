@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <pthread.h>
+#include <errno.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -17,7 +18,12 @@
 static double max_adc = 4095.0; 
 static double vref = 3.3; 
 
-
+/**
+ * @brief Write a string to a file
+ * 
+ * @param path the path to the file
+ * @param value the string to write
+ */
 void write2file(const char *path, const char *value) {
     FILE *f = fopen(path, "w");
     if (f == NULL) {
@@ -33,6 +39,15 @@ void write2file(const char *path, const char *value) {
     }
 }
 
+/**
+ * @brief Open a SPI device
+ * 
+ * @param path the path to the device
+ * @param mode the SPI mode
+ * @param bits the bits per word
+ * @param speed the SPI speed
+ * @return int the file descriptor
+ */
 int devRead(const char * path, uint8_t mode, uint8_t bits, uint32_t speed) {
     int fd = open(path, O_RDWR);
     if (fd < 0) { 
@@ -58,6 +73,12 @@ int devRead(const char * path, uint8_t mode, uint8_t bits, uint32_t speed) {
     return fd;
 }
 
+/**
+ * @brief Print statistics for a given event
+ * 
+ * @param Event the event
+ * @return Period_statistics_t a struct containing the statistics
+ */
 Period_statistics_t printStatistics(enum Period_whichEvent Event) {
     Period_statistics_t stats;
     Period_getStatisticsAndClear(Event, &stats);
@@ -71,6 +92,14 @@ Period_statistics_t printStatistics(enum Period_whichEvent Event) {
     return stats;
 }
 
+/**
+ * @brief Reads an ADC channel
+ * 
+ * @param fd the file descriptor of the SPI device
+ * @param ch the channel to read
+ * @param speed_hz the SPI speed
+ * @return int the value read from the ADC
+ */
 int read_adc_ch(int fd, int ch, uint32_t speed_hz) {
     if (ch < 0 || ch > 7) {
         errno = EINVAL;
@@ -103,12 +132,22 @@ int read_adc_ch(int fd, int ch, uint32_t speed_hz) {
     return ((rx[1] & 0x0F) << 8) | rx[2];
 }
 
+/**
+ * @brief Converts nanoseconds to milliseconds
+ * 
+ * @param ns the value in nanoseconds
+ * @return double the converted value
+ */
 double nanotoms (int ns){
     double ms = (double)ns / 1000000.0;
     return ms;
 }
 
-
+/**
+ * @brief Returns the current time in milliseconds
+ * 
+ * @return long long the current time
+ */
 long long getTimeInMs(void) {
     struct timespec spec;
 
@@ -124,10 +163,21 @@ long long getTimeInMs(void) {
     return milliSeconds;
 }
 
+/**
+ * @brief Converts ADC reading to voltage
+ * 
+ * @param reading the ADC reading (must call read_adc_ch to get this)
+ * @return double the voltage
+ */
 double ADCtoV(int reading){
     return (reading*vref)/max_adc;
 }
 
+/**
+ * @brief Sleeps for a given number of milliseconds
+ * 
+ * @param ms the time to sleep for
+ */
 void sleep_ms(long long ms){
     
     if (ms <= 0) return; // if the time is negative
@@ -142,6 +192,11 @@ void sleep_ms(long long ms){
     nanosleep(&reqDelay,(struct timespec *)NULL);
 }
 
+/**
+ * @brief Sanitizes a line of text
+ * 
+ * @param s the line of text
+ */
 static void sanitize_line(char *s) {
     if (!s) return;
     
@@ -166,6 +221,11 @@ static void sanitize_line(char *s) {
     }
 }
 
+/**
+ * @brief Converts a string to lowercase ASCII
+ * 
+ * @param s the string
+ */
 static void to_lower_ascii(char *s){
     if (!s) return;
     for (; *s; ++s) {
