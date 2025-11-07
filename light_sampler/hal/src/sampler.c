@@ -9,7 +9,6 @@
 #include <errno.h>
 #include <string.h>
 #include <pthread.h>
-#include <stdatomic.h>
 
 /*
  * Lightweight sampling module (internal names changed for clarity):
@@ -19,98 +18,68 @@
  */
 
 static int adc_channel = 0;
-static pthread_t thread_id;
-static double *current_samples = NULL;   // newest samples (up to 1 second)
-static int current_size = 0;
-
-static double *history_samples = NULL;   // last archived samples 
-static int history_size = 0;
-
+static Sampler samp = {
+    .curr = {NULL, 0},
+    .hist = {NULL, 0,0},
+    .stats = {0.0, 0},
+    .lock = PTHREAD_MUTEX_INITIALIZER,
+    .initialized = false
+};
 static double alpha = 0.999;            // smoothing factor for EMA 
-static long long total_samples = 0;
-static bool first_sample = true;
-static double AvgRead = 0.0;
 
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
-// State bools
-static bool is_initialized = false;
-static atomic_bool sampling_enabled = false;
+//State bool
 static bool dip_detected = false; 
 
 // Initialize sampling system and start the worker thread.
 void sampler_init() {
-    if (is_initialized) {
+    if (samp.initialized) {
         fprintf(stderr, "sampler: already initialized\n");
         return;
     }
 
-    is_initialized = true;
-    sampling_enabled = true;
+    samp.initialized = true;
 
-    Period_init();
-
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-
-    current_samples = malloc(sizeof(double) * MAX_SAMPLESPERSECOND);
-    if (!current_samples) {
-        perror("sampler: malloc failed");
+    samp.curr.samples = malloc(sizeof(double) * MAX_samplesPERSECOND);
+    if (!samp.curr.samples) {
+        perror("sampler_init(): malloc failed");
         exit(-1);
     } else if (read_adc_ch(adc_channel) < 0) {
-        perror("sampler: failed to read adc channel");
+        perror("sampler_init(): failed to read adc channel");
         exit(-1);
     }
-
-    //pass address of total_samples as the thread argument (keeps original behavior)
-    pthread_create(&thread_id, &attr, samplerThread, &total_samples);
-    pthread_attr_destroy(&attr);
 }
 
 
 // Tear down sampling and free sampless. 
 void sampler_cleanup() {
-    if (!is_initialized) {
+    if (!samp.initialized) {
         fprintf(stderr, "sampler: not initialized\n");
         return;
     }
 
-    is_initialized = false;
-    sampling_enabled = false;
-
-    pthread_mutex_lock(&mutex);
-    free(current_samples);
-    free(history_samples);
-    current_samples = history_samples = NULL;
-    current_size = history_size = 0;
-    pthread_mutex_unlock(&mutex);
-
-    pthread_join(thread_id, NULL);
-    // exit the calling thread context as original did; keep call to Period cleanup 
-    pthread_exit(0);
-    Period_cleanup();
+    samp.initialized = false;
 }
 
 void sampler_moveCurrentDataToHistory(){
-    pthread_mutex_lock(&latch);
-    free(histSamples);
-    histSamples = malloc(sizeof(double)* currSize);
-    if (histSamples){
-        memcpy(histSamples,currSamples,sizeof(double)*currSize);
-        histSize = currSize;
-        currSize = 0;
+    pthread_mutex_lock(&samp.lock);
+    free(samp.hist.samples);
+    samp.hist.samples = malloc(sizeof(double)* samp.curr.size);
+    if (samp.hist.samples){
+        memcpy(samp.hist.samples,samp.curr.samples,sizeof(double)*samp.curr.size);
+        samp.hist.size = samp.curr.size;
+        samp.curr.size = 0;
     } else{
-        histSize = 0;
+        samp.hist.size = 0;
     }
-    pthread_mutex_unlock(&latch);
+    pthread_mutex_unlock(&samp.lock);
 }
 
 
 // Return how many samples are present in the preserved history snapshot. 
-int sampler_getHistorySize() {
-    pthread_mutex_lock(&latch);
-    int size = histSize;
-    pthread_mutex_unlock(&latch);
+int sampler_getHistorysize() {
+    pthread_mutex_lock(&samp.lock);
+    int size = samp.hist.size;
+    pthread_mutex_unlock(&samp.lock);
     return size;
 }
 
@@ -120,8 +89,8 @@ void sampler_getTimingStatistics(Period_statistics_t *pStats) {
     }
 }
 
-/* Get/clear total samples statistics (preserve original mapping). */
-void sampler_getTotalSamples(Period_statistics_t *pStats) {
+/* Get/clear total samples statistics*/
+void sampler_getTotalsamples(Period_statistics_t *pStats) {
     if (pStats) {
         Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_FINAL, pStats);
     }
@@ -129,68 +98,123 @@ void sampler_getTotalSamples(Period_statistics_t *pStats) {
 
 
 // Return an allocated copy of the last archived history. Caller must free(). 
-double* sampler_getHistory(int* size) {
-    pthread_mutex_lock(&mutex);
-    double* copy = NULL;
-    if (history_size > 0) {
-        copy = malloc(sizeof(double) * history_size);
-        if (copy) {
-            memcpy(copy, history_samples, sizeof(double) * history_size);
+double* sampler_getHistory(int size ) {
+    double* histTemp = NULL;
+    pthread_mutex_lock(&samp.lock);
+    int n = samp.hist.size;
+    if (size) *size = n;
+    if (n > 0){
+        histTemp = malloc(sizeof(double)*(size_t)n);
+        if (histTemp){
+            memcpy(histTemp,samp.hist.samples, sizeof(double)*(size_t)n); 
         }
     }
-    if (size) {
-        *size = history_size;
-    }
-    pthread_mutex_unlock(&mutex);
-    return copy;
+    pthread_mutex_unlock(&samp.lock);
+    return histTemp;
+}
+long long sampler_getNumsamplesTaken(){
+    printf("Total number of samples: %d", samp.stats.total);
+    return samp.stats.total;
 }
 
-
+double sampler_getCurrentReading(){
+    while(samp.initialized){
+        double adcVal = read_adc_ch(adc_channel);
+            if (adcVal < 0) {
+                fprintf(stderr,"sampler_getCurrentReading(): ADC read failed
+                            \n returning error value -1 ");
+                sleep_ms(100);
+                return -1;
+            }
+        if (adcVal > MAX_ADCVALUE){
+            adcVal = MAX_ADCVALUE;
+        } 
+        pthread_mutex_lock(&samp.lock);
+        if (samp.curr.size < MAX_SAMPLE_SIZE){
+           samp.curr.samples[samp.curr.size] = adcVal;
+           samp.curr.size ++;
+        } else {
+            printf("sampler_getCurrentReading(): buffer full/sample size too big
+                    \n returning error value -1");
+            sampler_cleanup();
+            return -1;
+        }
+        pthread_mutex_unlock(& samp.lock);
+        return adcVal;
+    }
+}
 
 /* Exponential moving average for the ADC samples. */
-double sampler_getAverageReading(double adc_val) {
-    if (first_sample) {
-        AvgRead = adc_val;
-        first_sample = false;
+double sampler_getAverageReading(double adc) {
+    pthread_mutex_lock (& samp.lock);
+    if (samp.stats.total==1) {
+        samp.stats.avg = adc;
     } else {
-        AvgRead = alpha * AvgRead + (1.0 - alpha) * adc_val;
+        samp.stats.avg = alpha * samp.stats.avg + (1.0 - alpha) * adc;
     }
-    return AvgRead;
+    pthread_mutex_unlock(& samp.lock);
+    return samp.stats.avg;
+}
+int sampler_getHistDips(){
+    pthread_mutex_lock(&samp.lock);
+    double *src = samp.hist.samples;
+    int n = samp.hist.size; 
+    if (n<=0||src == NULL){
+        fprintf(stderr, "sampler_getHistDips(): History not found");
+        pthread_mutex_unlock(&samp.lock);
+        return 0;
+    }
+    double* hist = malloc(sizeof(double)*(size_t)n);
+    if (!hist){
+        fprintf(stderr, "sampler_getHistDips(): malloc error");
+        pthread_mutex_unlock(&samp.lock);
+        return 0;
+    }
+    memccpy(hist, src, sizeof(double)*(size_t)n);
+    double currEma = samp.stats.avg;
+    pthread_mutex_unlock(&samp.lock);
+    
+    int dips = 0;
+    enum DIP_EVENTS state = ARMED;
+    dip_detected = false;
+    for (int i=0; i<n;i++){
+        const double samples= hist[i];
+        currEma = sampler_getAverageReading(samples);
+
+        if (samples<= currEma-DIP_TRIG){
+            dip_detected = true;
+            state = DIPPING;
+            ++dips;
+        } else if (samples>= currEma-DIP_REARM){
+            dip_detected = false;
+            state = ARMED;
+        }
+    }
+    free(hist);
+    samp.hist.dips = dips;
+    return dips;
 }
 
 
-/* Worker thread: repeatedly sample ADC, update sampless and stats. */
+/* Worker thread: repeatedly sample ADC, update samples and stats. 
 void* samplerThread(void* arg) {
-    long long *limit_ptr = (long long*) arg;
-    long long limit = *limit_ptr;
-
-    sampler_init();
-    while (sampling_enabled) {
-        double adc_val = read_adc_ch(adc_channel);
-        if (adc_val < 0) {
-            perror("samplerThread: ADC read failed");
-            sleep_ms(1000); /* pause 1 second */
-            continue;
-        }
-
-        /* Mark timing and then store sample under lock */
-        Period_markEvent(PERIOD_EVENT_SAMPLE_LIGHT);
-        pthread_mutex_lock(&mutex);
-
-        AvgRead =sampler_getAverageReading(adc_val);
-
-        if (current_size < MAX_SAMPLESPERSECOND) {
-            current_samples[current_size] = adc_val;
-            current_size++;
-        }
-        int size = sampler_getHistorySize();
+    (void)arg;
+    while (samp.initialized) {
+        double adcVal = sampler_getCurrentReading();
+        // Mark timing and then store sample under lock 
+        pthread_mutex_lock(&samp.lock);
+        samp.stats.total++;
+        double avg = samp.stats.avg;
+        avg =sampler_getAverageReading(adcVal);
         
-        totSamples++;
-        
-        pthread_mutex_unlock(&latch);
+        if (adcVal>avg)    
+    
+        printf("Total number of samples: %d", samp.stats.total);
+        pthread_mutex_unlock(&samp.lock);
+
+        sleep_ms(1000);
 
     }
-
     sampler_cleanup();
     return NULL;
-}
+}*/
