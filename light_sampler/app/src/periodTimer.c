@@ -1,19 +1,25 @@
-#define _POSIX_C_SOURCE 200809L 
-#include <assert.h>
-#include <pthread.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include <stdlib.h>
-#include "hal/periodTimer.h"
-// Written by Brian Fraser
-// Data collected
+    #define _POSIX_C_SOURCE 200809L 
+    #include <assert.h>
+    #include <pthread.h>
+    #include <stdio.h>
+    #include <stdbool.h>
+    #include <string.h>
+    #include <stdlib.h>
 
-typedef struct {
-    long timestampCount;                             // Store the timestamp samples each time we mark an event.
-    long long timestampsInNs[MAX_EVENT_TIMESTAMPS];
-    long long prevTimestampInNs;                     // Used for recording the event between analysis periods.
-} timestamps_t;
+    #include "periodTimer.h"
+
+    // Written by Brian Fraser
+
+
+    // Data collected
+    typedef struct {
+        // Store the timestamp samples each time we mark an event.
+        long timestampCount;
+        long long timestampsInNs[MAX_EVENT_TIMESTAMPS];
+
+        // Used for recording the event between analysis periods.
+        long long prevTimestampInNs;
+    } timestamps_t;
 
 static timestamps_t s_eventData[NUM_PERIOD_EVENTS];  // Data for each event
 static pthread_mutex_t s_lock = PTHREAD_MUTEX_INITIALIZER;  // Lock for accessing data
