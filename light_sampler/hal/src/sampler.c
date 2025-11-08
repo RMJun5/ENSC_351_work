@@ -55,7 +55,7 @@ void sampler_init() {
         return;
     }  
     
-    spi_fd = devRead(DEV_PATH, DEV_MODE, DEV_BITS, DEV_SPEED);
+    spi_fd = open(DEV_PATH, O_RDWR);
     if (spi_fd < 0) {
         perror("sampler_init(): SPI open failed");
         exit(EXIT_FAILURE);
@@ -72,21 +72,20 @@ void sampler_init() {
     samp.history.size = 0;
     samp.stats.avg = 0.0;
     samp.stats.totalSamplesTaken = 0;
-     int fd = open(DEV_PATH, O_RDWR);
      
-    if (read_adc_ch(fd, adc_channel, DEV_SPEED) < 0) {
+    if (read_adc_ch(spi_fd, adc_channel, DEV_SPEED) < 0) {
          perror("sampler_init(): failed to read adc channel");
          exit(-1);
     }
     atomic_store(&running, true);
     pthread_attr_t sampAttr;
     pthread_attr_init(&sampAttr);
-    pthread_create(&samp.threadID, &sampAttr, samplerThread, NULL);
-     if (pthread_create(&samp.threadID, &sampAttr, samplerThread, NULL) != 0) {
+    int rc = pthread_create(&samp.threadID, &sampAttr, samplerThread, NULL);
+     if (rc != 0) {
         perror("sampler_init(): pthread_create failed");
         samp.initialized = false;
         atomic_store(&running, false);
-        return;
+        exit(-1);
     }
     pthread_attr_destroy(&sampAttr);
     samp.initialized = true;
@@ -183,11 +182,10 @@ double* sampler_getHistory(int*size ) {
  * @return the number of samples taken
  */
 long long sampler_getNumSamplesTaken(){
-    printf("Total number of samples: %d", samp.stats.totalSamplesTaken);
-    return samp.stats.totalSamplesTaken;
     pthread_mutex_lock(&samp.lock);
     long long t = samp.stats.totalSamplesTaken;
     pthread_mutex_unlock(&samp.lock);
+    printf("Total number of samples: %d", samp.stats.totalSamplesTaken);
     return t;
 }
 
@@ -265,14 +263,12 @@ void sampler_moveCurrentDataToHistory() {
  * 
  */
 double sampler_getAverageReading(double adc) {
-    pthread_mutex_lock (&samp.lock);
     if (samp.stats.totalSamplesTaken == 1) {
         samp.stats.avg = adc;
     } else {
         samp.stats.avg = alpha * samp.stats.avg + (1.0 - alpha) * adc;
     }
     double avg = samp.stats.avg;
-    pthread_mutex_unlock(&samp.lock);
     return avg;
 }
 
@@ -335,9 +331,8 @@ int sampler_getHistDips(){
 void* samplerThread(void* arg) {
 
     (void)arg;  // unused
-    
-    int fd = spi_fd;
-    if (fd < 0) {
+
+    if (spi_fd < 0) {
         perror("open ADC device");
         return NULL;
     }
@@ -350,47 +345,44 @@ void* samplerThread(void* arg) {
     while (atomic_load(&running)) {
 
         // Direct ADC read (don't use getCurrentReading to avoid double-locking)
-        double adcVal = read_adc_ch(fd, adc_channel, DEV_SPEED);
-        if (adcVal < 0) {
+        int raw = read_adc_ch(spi_fd, adc_channel, DEV_SPEED);
+        if (raw < 0) {
             fprintf(stderr, "sampler: ADC read failed\n");
             sleep_ms(SAMPLE_INTERVAL_MS);
             continue;
         }
         
         // Clamp to valid range
-        if (adcVal > MAX_ADCVALUE) {
-            adcVal = MAX_ADCVALUE;
+        if (raw > (int)MAX_ADCVALUE) {
+            raw = (int)MAX_ADCVALUE;
         }
-        
-        // Get current time for rotation check
-        struct timespec now;
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        
-        // Check if we need to rotate buffers (1 second elapsed)
-        if ((now.tv_sec - last_rotation.tv_sec) >= 1) {
-            sampler_moveCurrentDataToHistory();
-            last_rotation = now;
-        }
+        double adcVal = (double)raw;
+
         pthread_mutex_lock(&samp.lock);
         // Update running statistics
         samp.stats.totalSamplesTaken++;
-        if (samp.stats.totalSamplesTaken == 1)
-            samp.stats.avg = adcVal; // first sample
-        else
-            samp.stats.avg = alpha * samp.stats.avg + (1.0 - alpha) * adcVal; // EMA update
-        
-        // Store in current buffer if there's room
         if (samp.buffer.size < MAX_SAMPLESPERSECOND) {
             samp.buffer.samples[samp.buffer.size++] = adcVal;
         }
-
-        Period_init();
+        double avg = sampler_getAverageReading(adcVal);
 
         pthread_mutex_unlock(&samp.lock);
         
         // Mark event for timing analysis
         Period_markEvent(PERIOD_EVENT_SAMPLE_LIGHT);
+         // Track time for 1-second intervals
+         // struct timespec last_rotation = {0, 0};
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+         time_t dsec = now.tv_sec - last_rotation.tv_sec;
+        long   dnsec = now.tv_nsec - last_rotation.tv_nsec;
+        if (dnsec < 0) { dsec -= 1; dnsec += 1000000000L; }
 
+        if (dsec >= 1) {
+            sampler_moveCurrentDataToHistory();   // locks internally
+            Period_markEvent(PERIOD_EVENT_SAMPLE_FINAL);
+            last_rotation = now;
+        }
         // Sleep precisely 1ms (sampling interval)
         sleep_ms(SAMPLE_INTERVAL_MS);
     }
