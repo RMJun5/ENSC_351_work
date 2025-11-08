@@ -103,15 +103,15 @@ void UDP_start (void) {
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     int rc = pthread_create(&UDPListenerID, &attr, UDPThread, NULL);
-    pthread_attr_destroy(&attr);
-
-    if (rc != 0) {
-        errno = rc;
-        perror("pthread_create");
+     if (rc != 0) {
+        perror("sampler_init(): pthread_create failed");
+        atomic_store(&udp.running,false);
+        atomic_store(&udp.shutdown,true);
         close(s);
         udp.sock = -1;
         return;
     }
+    pthread_attr_destroy(&attr);
 
     UDPstarted = true;
 

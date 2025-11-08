@@ -1,25 +1,14 @@
-// #include "hal/sampler.h"
-// #include "hal/led.h"
-// #include "hal/periodTimer.h"
-// #include "hal/help.h"
-
-// #include <stdio.h>
-// #include <stdlib.h>
-// #include <errno.h>
-// #include <string.h>
-// #include <pthread.h>
-// #include <stdatomic.h>
-// #include <time.h>
-
 #define _GNU_SOURCE
 #include "hal/sampler.h"
 #include "hal/help.h"       // devRead(), read_adc_ch(), ADCtoV(), sleep_ms(), Period_*()
+#include "hal/periodTimer.h"
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 #include <stdatomic.h>
+#include <time.h>
 #include <errno.h>
 
 /*
@@ -30,7 +19,7 @@
  */
 
 // Thread control
-// static pthread_t samplerThread_id;
+ static pthread_t samplerThread_id;
 
 static atomic_bool running = false;       // Thread running flag
 static int spi_fd = -1;                   // SPI file descriptor
@@ -71,8 +60,7 @@ void sampler_init() {
         perror("sampler_init(): SPI open failed");
         exit(EXIT_FAILURE);
     }
-
-
+    
     samp.buffer.samples = malloc(sizeof(double) * MAX_SAMPLESPERSECOND);
     if (!samp.buffer.samples) {
         perror("sampler_init(): malloc failed");
@@ -84,20 +72,24 @@ void sampler_init() {
     samp.history.size = 0;
     samp.stats.avg = 0.0;
     samp.stats.totalSamplesTaken = 0;
-
-    int fd = open(DEV_PATH, O_RDWR);
-
+     int fd = open(DEV_PATH, O_RDWR);
+     
     if (read_adc_ch(fd, adc_channel, DEV_SPEED) < 0) {
          perror("sampler_init(): failed to read adc channel");
          exit(-1);
     }
     atomic_store(&running, true);
+    pthread_attr_t sampAttr;
+    pthread_attr_init(&sampAttr);
+    pthread_create(&samp.threadID, &sampAttr, samplerThread, NULL);
+     if (pthread_create(&samp.threadID, &sampAttr, samplerThread, NULL) != 0) {
+        perror("sampler_init(): pthread_create failed");
+        samp.initialized = false;
+        atomic_store(&running, false);
+        return;
+    }
+    pthread_attr_destroy(&sampAttr);
     samp.initialized = true;
-    
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_create(&samp.threadID, &attr, samplerThread, NULL);
-    pthread_attr_destroy(&attr);
 }
 
 /**
@@ -374,14 +366,12 @@ void* samplerThread(void* arg) {
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
         
-        pthread_mutex_lock(&samp.lock);
-        
         // Check if we need to rotate buffers (1 second elapsed)
-        if ((now.tv_sec - last_rotation.tv_sec) == 1) {
+        if ((now.tv_sec - last_rotation.tv_sec) >= 1) {
             sampler_moveCurrentDataToHistory();
             last_rotation = now;
         }
-        
+        pthread_mutex_lock(&samp.lock);
         // Update running statistics
         samp.stats.totalSamplesTaken++;
         if (samp.stats.totalSamplesTaken == 1)
