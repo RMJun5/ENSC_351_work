@@ -53,9 +53,9 @@ int main() {
     printf("%s", "Started the UDP server\n");
     
     for (int i = 0; i < 1000; i++) {
-        int val1 = read_encoder(LINE_OFFSET_16);
-        int val2 = read_encoder(LINE_OFFSET_17);
-        printf("Encoder values: %d, %d\n", val1, val2);
+
+        int val = read_encoder();
+        printf("Encoder value: %d\n", val);
         // wait 100ms
         usleep(100000);
 
@@ -74,7 +74,7 @@ int main() {
     // Print statistics
     Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_LIGHT, &stats);
     printf("Light sensor statistics:\n");
-    printf("  Num samples: %d\n", sampler_getNumSamplesTaken());
+    printf("  Num samples: %lld\n", sampler_getNumSamplesTaken());
     printf("  Avg period (ms): %.3f\n", stats.avgPeriodInMs);
     printf("  Min period (ms): %.3f\n", stats.minPeriodInMs);
     printf("  Max period (ms): %.3f\n", stats.maxPeriodInMs);

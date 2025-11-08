@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #include "hal/encoder.h"
 
+unsigned int LINE_OFFSET = 7;      // The offset of the GPIO line you want to control (e.g., GPIO16)
 int num;
 
 struct gpiod_chip *chip;
@@ -11,7 +12,6 @@ struct gpiod_line_request *request;
 
 const char *CHIPNAME = "/dev/gpiochip2"; // Typically the name of your GPIO chip
 
-unsigned int offsets[] = {7, 8};
 
 /**
  * @brief Reads the encoder
@@ -19,7 +19,7 @@ unsigned int offsets[] = {7, 8};
  */
 void encoder_init() {
 
-    // 1. open the gpiochip2
+    // 1. open the gpiochip0
     chip = gpiod_chip_open(CHIPNAME);
     if (chip == NULL){
         perror("Cannot open the chip\n");
@@ -46,7 +46,7 @@ void encoder_init() {
         gpiod_chip_close(chip);
         return;
     }
-    gpiod_line_config_add_line_settings(config, &offsets, 2, settings);
+    gpiod_line_config_add_line_settings(config, &LINE_OFFSET, 1, settings);
 
 
     // 4. Create request config and request the line
@@ -72,11 +72,8 @@ void encoder_init() {
     // } else {
     //     printf("Encoder line %u value: %d\n", LINE_OFFSET, value);
     // }
-    int valA = gpiod_line_request_get_value(request, offsets[0]);
-    int valB = gpiod_line_request_get_value(request, offsets[1]);
-    last_state = (valA << 1) | valB;
-    
-    printf("Encoder initialized on GPIOs %d and %d\n", LINE_A, LINE_B);
+
+    printf("%s", "Got the chips info");
 
     // 6. Close the chip
     gpiod_chip_close(chip);
@@ -85,34 +82,8 @@ void encoder_init() {
 
 int read_encoder() {
     if (!request) return -1;
-    int value = gpiod_line_request_get_value(request, offsets, 2);
+    int value = gpiod_line_request_get_value(request, LINE_OFFSET);
     if (value < 0)
         perror("Failed to read encoder line");
     return value;
-}
-
-void encoder_poll(void) {
-    if (!request) return;
-
-    int valA = gpiod_line_request_get_value(request, LINE_A);
-    int valB = gpiod_line_request_get_value(request, LINE_B);
-    if (valA < 0 || valB < 0) {
-        perror("Failed to read encoder lines");
-        return;
-    }
-
-    int state = (valA << 1) | valB;
-
-    // Decode quadrature state transitions
-    if (state != last_state) {
-        if ((last_state == 0 && state == 1) ||
-            (last_state == 1 && state == 3) ||
-            (last_state == 3 && state == 2) ||
-            (last_state == 2 && state == 0)) {
-            position++; // CW
-        } else {
-            position--; // CCW
-        }
-        last_state = state;
-    }
 }
