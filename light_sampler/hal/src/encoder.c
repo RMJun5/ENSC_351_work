@@ -1,8 +1,14 @@
 #define _GNU_SOURCE
 #include "hal/encoder.h"
 
-unsigned int LINE_OFFSET = 16;      // The offset of the GPIO line you want to control (e.g., GPIO16)
+unsigned int LINE_OFFSET = 7;      // The offset of the GPIO line you want to control (e.g., GPIO16)
 int num;
+
+struct gpiod_chip *chip;
+struct gpiod_line_settings *settings;
+struct gpiod_line_config *config;
+struct gpiod_request_config *req_cfg;
+struct gpiod_line_request *request;
 
 const char *CHIPNAME = "/dev/gpiochip2"; // Typically the name of your GPIO chip
 
@@ -11,13 +17,7 @@ const char *CHIPNAME = "/dev/gpiochip2"; // Typically the name of your GPIO chip
  * @brief Reads the encoder
  * 
  */
-void read_encoder() {
-
-    struct gpiod_chip *chip;
-    struct gpiod_line_settings *settings;
-    struct gpiod_line_config *config;
-    struct gpiod_request_config *req_cfg;
-    struct gpiod_line_request *request;
+void encoder_init() {
 
     // 1. open the gpiochip0
     chip = gpiod_chip_open(CHIPNAME);
@@ -36,8 +36,8 @@ void read_encoder() {
         gpiod_chip_close(chip);
         return;
     }
-    gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_OUTPUT);
-
+    gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_INPUT);
+    gpiod_line_settings_set_bias(settings, GPIOD_LINE_BIAS_PULL_UP);  // <-- Here!
 
     // 3. Create line config and request the line
     config = gpiod_line_config_new();
@@ -57,7 +57,7 @@ void read_encoder() {
         return;
     }
     gpiod_request_config_set_consumer(req_cfg, "myapp");
-    
+
     request = gpiod_chip_request_lines(chip, req_cfg, config);
     if (request == NULL){
         perror("Cannot get request");
@@ -66,12 +66,12 @@ void read_encoder() {
     }
 
     // 5. Read the current logical value of the line
-    int value = gpiod_line_request_get_value(request, LINE_OFFSET);
-    if (value < 0) {
-        perror("gpiod_line_request_get_value");
-    } else {
-        printf("Encoder line %u value: %d\n", LINE_OFFSET, value);
-    }
+    // int value = gpiod_line_request_get_value(request, LINE_OFFSET);
+    // if (value < 0) {
+    //     perror("gpiod_line_request_get_value");
+    // } else {
+    //     printf("Encoder line %u value: %d\n", LINE_OFFSET, value);
+    // }
 
     printf("%s", "Got the chips info");
 
@@ -80,3 +80,10 @@ void read_encoder() {
 
 }
 
+int read_encoder() {
+    if (!request) return -1;
+    int value = gpiod_line_request_get_value(request, LINE_OFFSET);
+    if (value < 0)
+        perror("Failed to read encoder line");
+    return value;
+}
