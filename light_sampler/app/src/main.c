@@ -38,15 +38,20 @@ bool timeElapsed(){
 int main() {
 
     // Initialize hardware & modules
-    read_encoder();
     led_init();
+    
     led_set_parameters(1000000000, 500000); // 1s period, 50% duty
+    printf("%s", "Initialized the LED\n");
 
     sampler_init();     // initialize sampler once
+    printf("%s", "Initialized the sampler\n");
     UDP_start();        // start UDP server
+    printf("%s", "Started the UDP server\n");
     Period_init();      // initialize period timer
+    printf("%s", "Initialized the period timer\n");
 
     for (int i = 0; i < 1000; i++) {
+        read_encoder();
         // wait 100ms
         usleep(100000);
 

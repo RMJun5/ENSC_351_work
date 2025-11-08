@@ -1,10 +1,10 @@
 #define _GNU_SOURCE
 #include "hal/encoder.h"
 
-unsigned int LINE_OFFSET = 23;      // The offset of the GPIO line you want to control (e.g., GPIO16)
+unsigned int LINE_OFFSET = 16;      // The offset of the GPIO line you want to control (e.g., GPIO16)
 int num;
 
-const char *CHIPNAME = "/dev/gpiochip0"; // Typically the name of your GPIO chip
+const char *CHIPNAME = "/dev/gpiochip2"; // Typically the name of your GPIO chip
 
 
 /**
@@ -22,11 +22,11 @@ void read_encoder() {
     // 1. open the gpiochip0
     chip = gpiod_chip_open(CHIPNAME);
     if (chip == NULL){
-        perror("Cannot open the chip");
+        perror("Cannot open the chip\n");
         gpiod_chip_close(chip);
         return;
     }
-    printf("%s", "Chip opened");
+    printf("%s", "Chip opened\n");
 
 
    // 2. Create line settings (INPUT for encoder signals)
