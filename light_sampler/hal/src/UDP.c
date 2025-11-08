@@ -14,7 +14,6 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <signal.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,69 +51,24 @@ static void send_text(const char *text);
  * @brief Start the UDP server
  * 
  */
-void UDP_start (void) {
-
-    if (atomic_load(&udp.running)){
-        fprintf(stderr, "UDP_start: UDP server already started\n");
+void UDP_start(void)
+{
+    if (atomic_load(&udp.running)) {
+        fprintf(stderr, "UDP_start: already running\n");
         return;
     }
 
-   //if (!udp.shutdown) {
-    if (atomic_load_explicit(&udp.shutdown, memory_order_acquire)) {
-        fprintf(stderr, "UDP_start():Shutdown flag is set\n");
-        return;
-    } 
-    
-    // if (atomic_load_explicit(& udp.shutdown, memory_order_acquire)){
-    //     fprintf(stderr, "UDP_start: shutdown flag is already set\n");
-    //     return;
-    // }
-
-    int s = socket(AF_INET, SOCK_DGRAM, 0);
-    if (s < 0) { 
-        perror("socket"); 
-        return;
-    }
-
-    int yes = 1;
-    if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0) {
-        perror("setsockopt(SO_REUSEADDR)");
-        close(s);
-        return;
-    }
-
-    // Bind 0.0.0.0:PORT
-    struct sockaddr_in addr = {0};
-    addr.sin_family      = AF_INET;
-    addr.sin_port        = htons(PORT);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-    if (bind(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        perror("bind");
-        close(s);
-        return;
-    }
-    
-    udp.sock = s; // udp.state.sock = s;
-    // atomic_store_explicit(&udp.running, true, memory_order_release);
-    atomic_store(&udp.running, true);
     atomic_store(&udp.shutdown, false);
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     int rc = pthread_create(&UDPListenerID, &attr, UDPThread, NULL);
-     if (rc != 0) {
-        perror("sampler_init(): pthread_create failed");
-        atomic_store(&udp.running,false);
-        atomic_store(&udp.shutdown,true);
-        close(s);
-        udp.sock = -1;
-        return;
-    }
     pthread_attr_destroy(&attr);
 
-    UDPstarted = true;
-
+    if (rc != 0) {
+        fprintf(stderr, "UDP_start: pthread_create failed (%d)\n", rc);
+        return;
+    }
 }
 
 void UDP_stop(void){
@@ -235,7 +189,7 @@ void UDP_length(void){
 void UDP_dips(void){
     int d = sampler_getHistDips();
     char dipbuf[128];
-    int m = snprintf(dipbuf, sizeof(dipbuf), "# of samples taken last second: %d \n", d);
+    int m = snprintf(dipbuf, sizeof(dipbuf), "# of dips: %d \n", d);
     if (m) {
         // send_text(udp.sock, client,clen, dipbuf);
         send_text(dipbuf);
@@ -368,7 +322,6 @@ static void dispatch(const char *cmd) {
         send_text(m);
         if (udp.shutdown) {
             atomic_store_explicit(&udp.shutdown, true, memory_order_release);
-            UDP_stop();
         }
     } 
     else {
@@ -397,8 +350,33 @@ void trim_line(char *line) {
  */
 void* UDPThread(void* arg) {
     (void)arg;
-    atomic_store_explicit(&udp.running, true, memory_order_release);
+    if (udp.sock < 0) {
+        int s = socket(AF_INET, SOCK_DGRAM, 0);
+        if (s < 0) {
+            perror("UDPThread: socket");
+            return NULL;
+        }
+    
+    int yes = 1;
+    if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0) {
+            perror("UDPThread: setsockopt(SO_REUSEADDR)");
+            close(s);
+            return NULL;
+        }
+    struct sockaddr_in addr = {0};
+        addr.sin_family      = AF_INET;
+        addr.sin_port        = htons(PORT);
+        addr.sin_addr.s_addr = htonl(INADDR_ANY);
+          if (bind(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+            perror("UDPThread: bind");
+            close(s);
+            return NULL;
+        }
 
+        udp.sock = s;
+    }
+    atomic_store(&udp.running, true);
+    atomic_store(&udp.shutdown, false);
     char buf[BUFF_SIZE];
     // while (!udp.shutdown || !atomic_load_explicit(udp.shutdown, memory_order_acquire)) {
     while (!atomic_load_explicit(&udp.shutdown, memory_order_acquire)) {
