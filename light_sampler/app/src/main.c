@@ -10,7 +10,6 @@
 #include <string.h>
 #include <unistd.h>
 
-
 Period_statistics_t stats;
 
 // 1 second timer
@@ -38,20 +37,25 @@ bool timeElapsed(){
 int main() {
 
     // Initialize hardware & modules
+    Period_init();      // initialize period timer
+    printf("%s", "Initialized the period timer\n");
+
+    encoder_init();
+
     led_init();
-    
-    led_set_parameters(1000000000, 500000); // 1s period, 50% duty
+    led_set_parameters(1000000000, 800000); // 1s period, 70% duty
     printf("%s", "Initialized the LED\n");
 
     sampler_init();     // initialize sampler once
     printf("%s", "Initialized the sampler\n");
+
     UDP_start();        // start UDP server
     printf("%s", "Started the UDP server\n");
-    Period_init();      // initialize period timer
-    printf("%s", "Initialized the period timer\n");
-
+    
     for (int i = 0; i < 1000; i++) {
-        read_encoder();
+        int val1 = read_encoder(LINE_OFFSET_16);
+        int val2 = read_encoder(LINE_OFFSET_17);
+        printf("Encoder values: %d, %d\n", val1, val2);
         // wait 100ms
         usleep(100000);
 
@@ -70,7 +74,7 @@ int main() {
     // Print statistics
     Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_LIGHT, &stats);
     printf("Light sensor statistics:\n");
-    printf("  Num samples: %lld\n", sampler_getNumSamplesTaken());
+    printf("  Num samples: %d\n", sampler_getNumSamplesTaken());
     printf("  Avg period (ms): %.3f\n", stats.avgPeriodInMs);
     printf("  Min period (ms): %.3f\n", stats.minPeriodInMs);
     printf("  Max period (ms): %.3f\n", stats.maxPeriodInMs);

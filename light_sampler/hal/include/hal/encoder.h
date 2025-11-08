@@ -22,6 +22,7 @@ typedef enum {
 
 // Use the rotary encoder to control how fast the LED blinks (using PWM).
 // This LED emitter is designed to flash directly at the “detector” light sensor.
-void read_encoder();
+int read_encoder();
+void encoder_init();
 
 #endif
