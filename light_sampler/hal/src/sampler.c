@@ -82,6 +82,12 @@ void sampler_init() {
     pthread_attr_t sampAttr;
     pthread_attr_init(&sampAttr);
     pthread_create(&samp.threadID, &sampAttr, samplerThread, NULL);
+     if (pthread_create(&samp.threadID, &sampAttr, samplerThread, NULL) != 0) {
+        perror("sampler_init(): pthread_create failed");
+        samp.initialized = false;
+        atomic_store(&running, false);
+        return;
+    }
     pthread_attr_destroy(&sampAttr);
     samp.initialized = true;
 }
