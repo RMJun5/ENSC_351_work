@@ -10,11 +10,11 @@ struct gpiod_line_config *config;
 struct gpiod_request_config *req_cfg;
 struct gpiod_line_request *request;
 
-const char *CHIPNAME = "/dev/gpiochip2"; // Typically the name of your GPIO chip
+const char *CHIPNAME = "/dev/gpiochip2"; // The GPIO chip for pins GPIO 16 and 17
 
 
 /**
- * @brief Reads the encoder
+ * @brief Initialize the encoder
  * 
  */
 void encoder_init() {

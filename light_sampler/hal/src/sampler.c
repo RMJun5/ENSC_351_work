@@ -202,31 +202,32 @@ double sampler_getCurrentReading() {
         return -1.0;
     }
 
-    double adcVal = read_adc_ch(fd, adc_channel, DEV_SPEED);
+    pthread_mutex_lock(&samp.lock);
 
-     while(samp.initialized) {
-         double adcVal = read_adc_ch(adc_channel, DEV_SPEED, DEV_BITS); // int read_adc_ch(int fd, int ch, uint32_t speed_hz)
-            if (adcVal < 0) {
-                fprintf(stderr,"sampler_getCurrentReading(): ADC read faileds\n returning error value -1 ");
-                sleep_ms(100);
-                return -1;
-            }
-        if (adcVal > MAX_ADCVALUE){
-            adcVal = MAX_ADCVALUE;
-        } 
-        return adcVal;
-        pthread_mutex_lock(&samp.lock);
-        if (samp.buffer.size < MAX_SAMPLESPERSECOND){
-            samp.buffer.samples[samp.buffer.size] = adcVal;
-            samp.buffer.size ++;
-         } else {
-             printf("sampler_getCurrentReading(): buffer full/sample size too big \n returning error value -1");
-             sampler_cleanup();
-             return -1;
-         }
-        pthread_mutex_unlock(& samp.lock);
-        return adcVal;
+    if (samp.buffer.size >= MAX_SAMPLESPERSECOND){
+        perror("buffer full/sample size too big \n returning error value -1");
+        sampler_cleanup();
+        return -1;
     }
+
+    double adcVal = read_adc_ch(fd, adc_channel, DEV_SPEED); // int read_adc_ch(int fd, int ch, uint32_t speed_hz)
+        
+    if (adcVal < 0) {
+        fprintf(stderr,"sampler_getCurrentReading(): ADC read faileds\n returning error value -1 ");
+        sleep_ms(100);
+        return -1;
+    }
+    if (adcVal > MAX_ADCVALUE){
+        adcVal = MAX_ADCVALUE;
+    } 
+    
+    samp.buffer.samples[samp.buffer.size] = adcVal;
+    samp.buffer.size++;
+
+    pthread_mutex_unlock(&samp.lock);
+
+    return adcVal;
+    
 }
 
 /**
