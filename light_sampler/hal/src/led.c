@@ -27,7 +27,7 @@ void led_init() {
 }
 
 /**
- * @brief Sets the LED parameters
+ * @brief Sets the LED parameters and enables the LED
  * 
  * @param period_ns the period in nanoseconds
  * @param duty_cycle_ns the duty cycle in nanoseconds
