@@ -24,5 +24,6 @@ typedef enum {
 // This LED emitter is designed to flash directly at the “detector” light sensor.
 int read_encoder();
 void encoder_init();
+void clean_encoder();
 
 #endif

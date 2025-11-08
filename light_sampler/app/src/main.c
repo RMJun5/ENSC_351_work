@@ -55,7 +55,7 @@ int main() {
     for (int i = 0; i < 1000; i++) {
 
         int val = read_encoder();
-        printf("Encoder value: %d\n", val);
+        printf("Encoder bits: %d (GPIO16=%d, GPIO17=%d)\n", val, (val >> 1) & 1, val & 1);
         // wait 100ms
         usleep(100000);
 
@@ -84,6 +84,7 @@ int main() {
     sampler_cleanup();
     Period_cleanup();
     led_cleanup();
+    clean_encoder();    
     
     return 0;
 }
