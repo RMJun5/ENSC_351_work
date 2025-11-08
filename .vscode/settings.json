@@ -18,5 +18,5 @@
         "sys/select.h": "c",
         "sys/socket.h": "c"
     },
-    "cmake.sourceDirectory": "C:/Users/richa/OneDrive/Documents/GitHub/ENSC_351_work/Assignment_1"
+    "cmake.sourceDirectory": "/home/r1chmy0ungsun/ensc351/work/repo/light_sampler"
 }
