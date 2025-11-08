@@ -39,7 +39,6 @@ int main() {
 
     // Initialize hardware & modules
     read_encoder();
-    Period_init();
     led_init();
     led_set_parameters(1000000000, 500000); // 1s period, 50% duty
 
@@ -52,7 +51,7 @@ int main() {
         usleep(100000);
 
         // get current reading
-        double reading = sampler_getCurrentReading();
+        //double reading = sampler_getCurrentReading();
 
         // every 1s: rotate history and mark event
         static int counter = 0;

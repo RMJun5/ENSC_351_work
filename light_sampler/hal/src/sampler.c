@@ -85,7 +85,9 @@ void sampler_init() {
     samp.stats.avg = 0.0;
     samp.stats.totalSamplesTaken = 0;
 
-    if (read_adc_ch(DEV_PATH, adc_channel, DEV_SPEED) < 0) {
+    int fd = open(DEV_PATH, O_RDWR);
+
+    if (read_adc_ch(fd, adc_channel, DEV_SPEED) < 0) {
          perror("sampler_init(): failed to read adc channel");
          exit(-1);
     }
