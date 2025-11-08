@@ -209,8 +209,13 @@ double sampler_getCurrentReading() {
         sampler_cleanup();
         return -1;
     }
-
-    double adcVal = read_adc_ch(fd, adc_channel, DEV_SPEED); // int read_adc_ch(int fd, int ch, uint32_t speed_hz)
+    int val = read_adc_ch(fd, adc_channel, DEV_SPEED);
+    if (val < 0) {
+        perror("read_adc_ch failed");
+        return;
+    }
+    double adcVal = (double)val;
+     // int read_adc_ch(int fd, int ch, uint32_t speed_hz) better practice
         
     if (adcVal < 0) {
         fprintf(stderr,"sampler_getCurrentReading(): ADC read faileds\n returning error value -1 ");
