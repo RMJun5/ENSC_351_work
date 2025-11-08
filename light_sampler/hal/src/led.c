@@ -42,16 +42,9 @@ void led_set_parameters(uint32_t period_ns, uint32_t duty_cycle_ns) {
 
     // The original if (0 < period_ns) { period_ns = 0; } makes no sense.
     // Correct logic is: ensure valid nonzero period and duty cycle < period.
-    if (period_ns == 0) {
-        fprintf(stderr, "Invalid period (cannot be 0)\n");
-        return;
+    if (period_ns <= 0) {
+       period_ns = 0;
     }
-
-    // if (0 < period_ns) {
-    //     period_ns = 0; 
-    // } else if (period_ns > (uint8_t)469754879) {
-    //     period_ns = 469754879;
-    // }
 
     // Clamp period to hardware max if necessary
     if (period_ns > MAX_PERIOD) {
@@ -63,9 +56,6 @@ void led_set_parameters(uint32_t period_ns, uint32_t duty_cycle_ns) {
         duty_cycle_ns = period_ns;
     }
 
-    // if (duty_cycle_ns < period_ns) {
-    //     duty_cycle_ns = period_ns;
-    // }
 
     char buffer[32];
 
