@@ -13,6 +13,7 @@
 
 Period_statistics_t stats;
 static double samples[1000];
+static double curr_hz = 10.0;                 // start at 10 Hz
 // static Sampler samp;
 
 /**
@@ -55,19 +56,50 @@ bool timeElapsed(void) {
  * @param encoder_bits the bits of GPIO pins 16 and 17 of the encoder
  */
 void update_led(int encoder_bits) {
-    static int pwm_period_ns = 1000000000; // default 1s
-    static int pwm_duty_ns = 500000000;    // 50%
-
-    switch (encoder_bits) {
-        case 0: pwm_period_ns = 800000000; break; // faster blink
-        case 1: pwm_period_ns = 600000000; break;
-        case 2: pwm_period_ns = 400000000; break;
-        case 3: pwm_period_ns = 200000000; break; // very fast
+    static const double MIN_HZ = 0.0;
+    static const double MAX_HZ = 500.0;
+     static int last_bits = -1;                    // previous encoder state
+    int delta = 0;
+    if (last_bits != -1 && encoder_bits != last_bits) {
+        int transition = ((last_bits & 0x3) << 2) | (encoder_bits & 0x3);
+        switch (transition) {
+            case 0b0001: case 0b0111: case 0b1110: case 0b1000:
+                delta = +1;  // clockwise
+                break;
+            case 0b0010: case 0b1011: case 0b1101: case 0b0100:
+                delta = -1;  // counter-clockwise
+                break;
+            default:
+                delta = 0;   // invalid/no change
+                break;
+        }
     }
+    last_bits = encoder_bits;
 
-    led_set_parameters(pwm_period_ns, pwm_duty_ns);
+    if (delta != 0) {
+        double new_hz = curr_hz + delta;
+
+        // clamp between 0 and 500 Hz
+        if (new_hz < MIN_HZ) new_hz = MIN_HZ;
+        if (new_hz > MAX_HZ) new_hz = MAX_HZ;
+
+        // only update PWM if frequency actually changed
+        if (new_hz != curr_hz) {
+            curr_hz = new_hz;
+
+            if (curr_hz > 0.0) {
+                unsigned int period_ns = (unsigned int)(1e9 / curr_hz);
+                unsigned int duty_ns   = period_ns / 2;   // 50% duty
+                led_set_parameters(period_ns, duty_ns);
+            } else {
+                // turn off LED cleanly at 0 Hz
+                led_set_parameters(0, 0);
+            }
+
+            printf("LED frequency: %.1f Hz\n", curr_hz);
+        }
+    }
 }
-
 /**
  * @brief Count the number of light dips in the array
  * 
@@ -96,6 +128,9 @@ int main() {
     printf("%s", "Initialized the encoder\n");
 
     led_init();
+    luint32_t start_period = (uint32_t)(1e9 / curr_hz);
+    uint32_t start_duty   = start_period / 2;
+    led_set_parameters(start_period, start_duty);
     printf("%s", "Initialized the LED\n");
 
     sampler_init();
@@ -122,7 +157,7 @@ int main() {
         i++;
         i = (i + 1) % 1000; // wrap around safely
 
-
+        
         // if the index of the array is greater than 1000, reset the index
         // if (i >= 1000) {
         //     i = 0;
