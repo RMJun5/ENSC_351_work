@@ -38,7 +38,8 @@ void encoder_init() {
     }
     gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_INPUT);
     gpiod_line_settings_set_bias(settings, GPIOD_LINE_BIAS_PULL_UP);
-
+    //gpiod_line_settings_set_edge_detection(settings, GPIOD_LINE_EDGE_BOTH); // Edge detection
+    
     // 3. Create line config and request the line
     config = gpiod_line_config_new();
     if (!config){
@@ -88,8 +89,25 @@ int read_encoder() {
 }
 
 void clean_encoder() {
-    if (request) gpiod_line_request_release(request);
-    if (chip) gpiod_chip_close(chip);
-    gpiod_line_request_release(request);
+    if (request) {
+        gpiod_line_request_release(request);
+        request = NULL;
+    }
+    if (req_cfg) {
+        gpiod_request_config_free(req_cfg);
+        req_cfg = NULL;
+    }
+    if (config) {
+        gpiod_line_config_free(config);
+        config = NULL;
+    }
+    if (settings) {
+        gpiod_line_settings_free(settings);
+        settings = NULL;
+    }
+    if (chip) {
+        gpiod_chip_close(chip);
+        chip = NULL;
+    }
     return;
 }
