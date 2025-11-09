@@ -91,6 +91,9 @@ int read_encoder() {
 
     // Pack A/B into a single number (bitwise)
     return (values[0] << 1) | values[1];
+
+    // instead, return the values
+
 }
 
 

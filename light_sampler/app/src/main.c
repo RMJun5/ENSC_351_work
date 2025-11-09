@@ -105,8 +105,8 @@ void update_led() {
         led_set_parameters(period_ns, duty_ns);
         last_freq_hz = freq_hz;
 
-        printf("LED frequency: %d Hz, period: %d ns, duty: %d ns\n",
-               freq_hz, period_ns, duty_ns);
+        printf("LED frequency: %d Hz, period: %.3fms ms, duty: %.3fms ms\n",
+               freq_hz, period_ns / 1e6, duty_ns / 1e6);
     }
 }
 
