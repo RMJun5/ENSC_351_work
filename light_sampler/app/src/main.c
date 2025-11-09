@@ -4,15 +4,20 @@
 #include "hal/UDP.h"
 #include "hal/encoder.h"
 #include "hal/led.h"
-#include "hal/encoder.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <stdlib.h>
+
 
 Period_statistics_t stats;
 static double samples[1000];
+
+#define MIN_PERIOD_NS 200000000  // 0.2 s, adjust for your hardware
+#define MAX_PERIOD_NS 1000000000 // 1 s, adjust for your hardware
+
 // static Sampler samp;
 
 /**
@@ -52,11 +57,12 @@ bool timeElapsed(void) {
 /**
  * @brief Update the speed of the LED when the encoder is turned
  * 
- * @param encoder_bits the bits of GPIO pins 16 and 17 of the encoder
+ * @param encoder_bits the bits of GPIO pins 22 and 27 of the encoder
  */
 void update_led(int encoder_bits) {
     static int pwm_period_ns = 1000000000; // default 1s
     static int pwm_duty_ns = 500000000;    // 50%
+    static int last_period_ns = 0;
 
     switch (encoder_bits) {
         case 0: pwm_period_ns = 800000000; break; // faster blink
@@ -65,7 +71,17 @@ void update_led(int encoder_bits) {
         case 3: pwm_period_ns = 200000000; break; // very fast
     }
 
-    led_set_parameters(pwm_period_ns, pwm_duty_ns);
+    // Clamp period to safe hardware limits
+    if (pwm_period_ns < MIN_PERIOD_NS) pwm_period_ns = MIN_PERIOD_NS;
+    if (pwm_duty_ns > pwm_period_ns) pwm_duty_ns = pwm_period_ns;
+    // Only update LED if period changed
+    if (pwm_period_ns != last_period_ns) {
+        led_set_parameters(pwm_period_ns, pwm_duty_ns);
+        last_period_ns = pwm_period_ns;
+    }
+
+    printf("pwm_period_ns = %d\n", pwm_period_ns);
+//    led_set_parameters(pwm_period_ns, pwm_duty_ns);
 }
 
 /**
