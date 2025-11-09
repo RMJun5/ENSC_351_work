@@ -30,13 +30,12 @@ static UDP udp = {
     .sock = -1,
     .running = ATOMIC_VAR_INIT(false), // active
     .shutdown= ATOMIC_VAR_INIT(false),
-    .clen = sizeof(struct sockaddr_in)
+    .clen = 0
 };
 
 static pthread_t UDPListenerID;
 static bool UDPstarted = false;
 static struct sockaddr_in client;
-static socklen_t clen = 0;
 
 static char last_cmd[64]={0};
 
@@ -59,33 +58,64 @@ void UDP_start(void)
         return;
     }
 
-    atomic_store(&udp.shutdown, false);
+    // 1) Create socket
+    udp.sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (udp.sock < 0) {
+        perror("UDP_start: socket");
+        return;
+    }
 
+    int yes = 1;
+    if (setsockopt(udp.sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0) {
+        perror("UDP_start: setsockopt(SO_REUSEADDR)");
+        close(udp.sock);
+        udp.sock = -1;
+        return;
+    }
+
+    // 2) Bind
+    struct sockaddr_in addr = {0};
+    addr.sin_family      = AF_INET;
+    addr.sin_port        = htons(PORT);          // 12345
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);    // listen on all local IPs
+
+    if (bind(udp.sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        perror("UDP_start: bind");
+        close(udp.sock);
+        udp.sock = -1;
+        return;
+    }
+
+    // 3) Flags
+    atomic_store(&udp.shutdown, false);
+    atomic_store(&udp.running,  true);
+    udp.clen = 0;                                // no client yet
+
+    // 4) Start the listener thread last
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     int rc = pthread_create(&UDPListenerID, &attr, UDPThread, NULL);
     pthread_attr_destroy(&attr);
-
     if (rc != 0) {
         fprintf(stderr, "UDP_start: pthread_create failed (%d)\n", rc);
+        close(udp.sock);
+        udp.sock = -1;
+        atomic_store(&udp.running, false);
         return;
     }
 }
 
-void UDP_stop(void){
-    if (!atomic_load(&udp.running)){
-        fprintf(stderr, "UDP_cleanup: UDP server already stopped\n");
+
+void UDP_stop(void)
+{
+    if (!atomic_load(&udp.running)) {
+        fprintf(stderr, "UDP_stop: already stopped\n");
         return;
     }
-    
+
     atomic_store(&udp.shutdown, true);
 
-    // UDPstarted = false;
-    // atomic_store_explicit(&udp.shutdown, true, memory_order_release);
-    
-    // Wake the thread if it's blocked in select: send a dummy packet to self
-    // (optional, select() has a timeout above, so this is just a fast-path).
-    // You can omit this if you like the 200ms worst-case delay.
+    // wake select() quickly
     struct sockaddr_in self = {0};
     self.sin_family      = AF_INET;
     self.sin_port        = htons(PORT);
@@ -94,71 +124,49 @@ void UDP_stop(void){
 
     pthread_join(UDPListenerID, NULL);
 
-    // close(udp.sock);
-    if (udp.sock >= 0) close(udp.sock);
-    udp.sock = -1;
+    if (udp.sock >= 0) { close(udp.sock); udp.sock = -1; }
     atomic_store(&udp.running, false);
-
-    // udp.sock = -1;
-    // UDPstarted = false;
-    // atomic_store_explicit(&udp.running, false, memory_order_release);
 }
 
-void send_text(const char *text ) {
 
-    // Make sure it uses the global socket
-    if (clen == 0 || udp.sock < 0) return;
-
-    //sendto(udp.sock, text, strlen(text), 0, (struct sockaddr*)&client, clen);
+static void send_text(const char *text)
+{
+    if (udp.clen == 0 || udp.sock < 0 || client.sin_port == 0) return;
 
     size_t len = strlen(text);
     const char *cursor = text;
-    
-    while(len > 0){
-        size_t chunk = len < CHUNK_LIM ? len : CHUNK_LIM;
+
+    while (len > 0) {
+        size_t chunk = (len < CHUNK_LIM) ? len : CHUNK_LIM;
         size_t cut = chunk;
 
-        const char *newLine = memrchr(cursor,'\n', chunk);
-        if(newLine) {cut = (size_t)(newLine-cursor+1);} 
-        // else {
-        //     const char *comma = NULL;
-        //     for (size_t i = chunk; i>1;--i){
-        //         if (cursor[i-2]==','&& cursor[i-1]==' '){
-        //             comma = cursor + (i-1);
-        //             break;
-        //         }
-        //     }
-        //     if (comma) {
-        //         cut = (size_t)(comma-cursor);
-        //     }
-        // }
-        // if (cut == 0 || cut > chunk){
-        //     cut = chunk;
-        // }
-        // if (clen == 0 || udp.sock < 0) return;
-        sendto(udp.sock,cursor,cut,0,&client , clen);
+        const char *nl = memrchr(cursor, '\n', chunk);
+        if (nl) cut = (size_t)(nl - cursor + 1);
+
+        sendto(udp.sock, cursor, cut, 0,
+               (struct sockaddr*)&client, udp.clen);
+
         cursor += cut;
-        len -= cut;
+        len    -= cut;
     }
 }
 
-void UDP_help (void){
-    static const char *help[] = { 
-                      "help - Returns a brief summary/list of supported commands.", 
-                      "? - Same as help",
-                      "count - Return the total number of samples taken",
-                      "length - Return the number of samples taken in the previously completed second.",
-                      "dips - Return the number of dips in the previously completed second.",
-                      "history - Return all the samples in the previously completed second.",
-                      "stop - Exit the program.",
-                      "<enter>(a blank input) - repeats last command"};
-    
-    printf("Available commands:\n"); 
-    int count = sizeof(help) / sizeof(help[0]);
-    for (int i = 0; i < count; ++i) {
+
+void UDP_help(void)
+{
+    static const char *help[] = {
+        "help - list commands\n",
+        "? - same as help\n",
+        "count - total samples taken\n",
+        "length - samples in last second\n",
+        "dips - dips in last second\n",
+        "history - 1 value per line (volts)\n",
+        "stop - stop server\n",
+        "<enter> - repeat last command\n"
+    };
+    for (size_t i = 0; i < sizeof(help)/sizeof(help[0]); ++i) {
         send_text(help[i]);
     }
-    // send_text(help);
 }
 
 /**
@@ -310,37 +318,10 @@ static void dispatch(const char *cmd) {
         // Save for blank-repeat
         strncpy(last_cmd, cmd, sizeof(last_cmd)-1);
         last_cmd[sizeof(last_cmd)-1] = '\0';
-    } 
-    if (!strcasecmp(cmd, "help") || !strcmp(cmd, "?")) {
-    //     UDP_help();
-    // } 
-    // else if (!strcasecmp(cmd, "count")) {
-    //     UDP_count();
-    // } 
-    // else if (!strcasecmp(cmd, "length")) {
-    //     UDP_length();
-    // } 
-    // else if (!strcasecmp(cmd, "dips")) {
-    //     UDP_dips();
-    // }
-    // else if (!strcasecmp(cmd, "history")) {
-    //     int n = 0;
-    //     double *hist = sampler_getHistory(&n);  // malloc'd copy + count
-    //     UDP_history(hist, n);
-    
-        static const char *help[] = {
-            "help - list commands",
-            "count - total samples taken",
-            "length - samples in last second",
-            "dips - dips in last second",
-            "history - samples last second",
-            "stop - stop server"
-        };
-        for (size_t i = 0; i < sizeof(help)/sizeof(help[0]); ++i) {
-            send_text(help[i]);
-        }
-    
-    } 
+    }
+     if (!strcasecmp(cmd, "help") || !strcmp(cmd, "?")) {
+        UDP_help();
+    }
     else if (!strcasecmp(cmd, "count")) {
         long long n = sampler_getNumSamplesTaken();
         char buf[128];
@@ -370,6 +351,7 @@ static void dispatch(const char *cmd) {
                 snprintf(line, sizeof(line), "%.3f\n", hist[i]);
                 send_text(line);
             }
+            double volts = ADCtoV((int)hist[i])
         }
         free(hist);
     }
@@ -400,60 +382,20 @@ void trim_line(char *line) {
  * @param arg 
  * @return void* 
  */
-void* UDPThread(void* arg) {
+void* UDPThread(void* arg)
+{
     (void)arg;
-
-    if (udp.sock < 0) {
-        udp.sock = socket(AF_INET, SOCK_DGRAM, 0);
-        if (udp.sock < 0) {
-            perror("UDPThread: socket");
-            return NULL;
-        }
-    
-        int yes = 1;
-        if (setsockopt(udp.sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0) {
-            perror("UDPThread: setsockopt(SO_REUSEADDR)");
-            close(udp.sock);
-            udp.sock = -1;
-            return NULL;
-        }
-
-        struct sockaddr_in addr = {0};
-        addr.sin_family      = AF_INET;
-        addr.sin_port        = htons(PORT);
-        addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-        if (bind(udp.sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-            perror("UDPThread: bind");
-            close(udp.sock);
-            udp.sock = -1;
-            return NULL;
-        }
-    }
-
-    atomic_store(&udp.running, true);
-    atomic_store(&udp.shutdown, false);
-
     char buf[BUFF_SIZE];
-    // while (!udp.shutdown || !atomic_load_explicit(udp.shutdown, memory_order_acquire)) {
-    while (!atomic_load(&udp.shutdown)) {
 
-        // Wait for data or wake periodically to check shutdown
+    while (!atomic_load(&udp.shutdown)) {
         fd_set rfds;
         FD_ZERO(&rfds);
+        if (udp.sock < 0) break;                // safety
         FD_SET(udp.sock, &rfds);
-        struct timeval tv = { .tv_sec = 0, .tv_usec = 200000 }; // 200 ms
-        
+        struct timeval tv = { .tv_sec = 0, .tv_usec = 200000 };
         int r = select(udp.sock + 1, &rfds, NULL, NULL, &tv);
-
-        if (r < 0) {
-            if (errno == EINTR) continue;
-            perror("select");
-            break;
-        } else if (r == 0) {
-            // timeout, loop to check shutdown
-            continue;
-        }
+        if (r < 0) { if (errno == EINTR) continue; perror("select"); break; }
+        if (r == 0) continue; // timeout
 
         if (FD_ISSET(udp.sock, &rfds)) {
             socklen_t len = sizeof(client);
@@ -462,18 +404,8 @@ void* UDPThread(void* arg) {
             if (n <= 0) continue;
             buf[n] = '\0';
             trim_line(buf);
-            udp.clen = len;  // update client length
+            udp.clen = len;                     // remember sender
             dispatch(buf);
-            // ssize_t n = recvfrom(udp.sock, buf, sizeof(buf)-1, 0,
-            //                      (struct sockaddr*)&client, &clen);
-            // if (n < 0) {
-            //     if (errno == EINTR || errno == EAGAIN) continue;
-            //     perror("recvfrom");
-            //     break;
-            // }
-            // buf[n] = '\0';
-            // trim_line(buf);
-            // dispatch(buf);
         }
     }
     atomic_store(&udp.running, false);
