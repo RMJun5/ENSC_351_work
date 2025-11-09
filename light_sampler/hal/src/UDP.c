@@ -41,7 +41,7 @@ static char last_cmd[64]={0};
 
 
 // Forward declarations
-// static void* UDPThread(void* arg);
+static void* UDPThread(void* arg);
 static void dispatch(const char *cmd);
 static void send_text(const char *text);
 
@@ -144,7 +144,7 @@ static void send_text(const char *text)
         if (nl) cut = (size_t)(nl - cursor + 1);
 
         sendto(udp.sock, cursor, cut, 0,
-               (struct sockaddr*)&client, udp.clen);
+            (struct sockaddr*)&client, udp.clen);
 
         cursor += cut;
         len    -= cut;
@@ -340,20 +340,17 @@ static void dispatch(const char *cmd) {
         snprintf(buf, sizeof(buf), "# dips last second: %d\n", d);
         send_text(buf);
     }
-    else if (!strcasecmp(cmd, "history")) {
-        int n = 0;
-        double *hist = sampler_getHistory(&n);  // malloc'd
+   else if (!strcasecmp(cmd, "history")) {
+    int n = 0;
+    double *hist = sampler_getHistory(&n);  // malloc'd array of last-second samples
         if (!hist || n <= 0) {
             send_text("History empty\n");
         } else {
-            char line[CHUNK_LIM];
-            for (int i = 0; i < n; ++i) {
-                snprintf(line, sizeof(line), "%.3f\n", hist[i]);
-                send_text(line);
-            }
-            double volts = ADCtoV((int)hist[i])
+            // Use your dedicated formatter that sends 10 values/line, comma-separated, 3 decimals.
+            // NOTE: UDP_history(...) frees 'hist' internally, so do NOT free it again here.
+            UDP_history(hist, n);
+            hist = NULL; // avoid accidental double-free if this code is edited later
         }
-        free(hist);
     }
     else if (!strcasecmp(cmd, "stop")) {
         send_text("Stopping server...\n");
