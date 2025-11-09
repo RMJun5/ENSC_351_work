@@ -1,2 +1,4 @@
 .DS_Store
 light_sampler/CMakeLists.txt
+
+light_sampler/hal/CMakeLists.txt

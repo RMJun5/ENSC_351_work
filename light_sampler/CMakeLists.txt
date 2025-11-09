@@ -27,10 +27,12 @@ message(STATUS "Cross-compiling with sysroot: ${CMAKE_CROSSCOMPILING}")
 # --- Sysroot support ---
 if(CMAKE_CROSSCOMPILING AND DEFINED CMAKE_SYSROOT)
     message(STATUS "Cross-compiling with sysroot: ${CMAKE_SYSROOT}")
-    set(ENV{PKG_CONFIG_SYSROOT_DIR} "~/ensc351/public/byai-sysroot")          # modify this to your path to your copied sysroot
-    set(ENV{PKG_CONFIG_PATH} "~/ensc351/public/byai-sysroot/usr/pkgconfig")   # and this
+    set(ENV{PKG_CONFIG_SYSROOT_DIR} "~/ENSC_351/public/byai-sysroot")          
+    set(ENV{PKG_CONFIG_PATH} "~/ENSC_351/public/byai-sysroot/usr/pkgconfig")
     set(CMAKE_FIND_ROOT_PATH ${CMAKE_SYSROOT})
 endif()
+
+    
 
 
 # --- Ensure pkg-config is available ---

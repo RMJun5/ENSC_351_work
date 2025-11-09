@@ -25,7 +25,7 @@ target_include_directories(hal
         ${LIBGPIOD_INCLUDE_DIRS}
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-
+ 
 # --- Link against libgpiod ---
 target_link_libraries(hal
     PUBLIC 
