@@ -77,7 +77,8 @@ void Period_markEvent(Period_whichEvent whichEvent) {
     pthread_mutex_lock(&s_lock);
     
     if (pData->timestampCount < MAX_EVENT_TIMESTAMPS) {
-        pData->timestampsInNs[pData->timestampCount] = getTimeInNanoS();
+        // pData->timestampsInNs[pData->timestampCount] = getTimeInNanoS();
+        pData->timestampsInNs[pData->timestampCount % MAX_EVENT_TIMESTAMPS] = getTimeInNanoS();
         pData->timestampCount++;
     } else {
         printf("WARNING: No sample space for event collection on %d\n", whichEvent);
@@ -102,6 +103,7 @@ void Period_markEvent(Period_whichEvent whichEvent) {
             }
 
             // Clear
+            memset(pData->timestampsInNs, 0, sizeof(pData->timestampsInNs));
             pData->timestampCount = 0;
         }
         pthread_mutex_unlock(&s_lock);

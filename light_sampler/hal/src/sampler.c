@@ -19,7 +19,7 @@
  */
 
 // Thread control
- static pthread_t samplerThread_id;
+static pthread_t samplerThread_id;
 
 static atomic_bool running = false;       // Thread running flag
 static int spi_fd = -1;                   // SPI file descriptor
@@ -81,12 +81,14 @@ void sampler_init() {
     pthread_attr_t sampAttr;
     pthread_attr_init(&sampAttr);
     int rc = pthread_create(&samp.threadID, &sampAttr, samplerThread, NULL);
-     if (rc != 0) {
+
+    if (rc != 0) {
         perror("sampler_init(): pthread_create failed");
         samp.initialized = false;
         atomic_store(&running, false);
         exit(-1);
     }
+    printf("pthread initialized\n");
     pthread_attr_destroy(&sampAttr);
     samp.initialized = true;
 }
@@ -205,24 +207,35 @@ double sampler_getCurrentReading() {
     pthread_mutex_lock(&samp.lock);
 
     if (samp.buffer.size >= MAX_SAMPLESPERSECOND){
-        perror("buffer full/sample size too big \n returning error value -1");
-        sampler_cleanup();
-        return -1;
+        // perror("buffer full/sample size too big\n");
+        //sampler_moveCurrentDataToHistory(); // clear the buffer
+        pthread_mutex_unlock(&samp.lock);
+        return 0;
     }
 
     double adcVal = read_adc_ch(fd, adc_channel, DEV_SPEED); // int read_adc_ch(int fd, int ch, uint32_t speed_hz)
         
     if (adcVal < 0) {
-        fprintf(stderr,"sampler_getCurrentReading(): ADC read faileds\n returning error value -1 ");
+        fprintf(stderr,"sampler_getCurrentReading(): ADC read fails\n returning error value -1 ");
+        pthread_mutex_unlock(&samp.lock);
         sleep_ms(100);
-        return -1;
+        return -1.0;
     }
+
     if (adcVal > MAX_ADCVALUE){
         adcVal = MAX_ADCVALUE;
     } 
     
     samp.buffer.samples[samp.buffer.size] = adcVal;
     samp.buffer.size++;
+
+    // Update exponential moving average
+    if (samp.stats.totalSamplesTaken == 0) {
+        samp.stats.avg = adcVal;  // first sample
+    } else {
+        samp.stats.avg = alpha * samp.stats.avg + (1.0 - alpha) * adcVal;
+    }
+    samp.stats.totalSamplesTaken++;
 
     pthread_mutex_unlock(&samp.lock);
 
@@ -259,18 +272,22 @@ void sampler_moveCurrentDataToHistory() {
 /**
  * @brief Exponential moving average for the ADC samples. Thread Safe
  * 
- * @param adc the current ADC reading
  * @return the average
  * 
  */
-double sampler_getAverageReading(double adc) {
-    if (samp.stats.totalSamplesTaken == 1) {
-        samp.stats.avg = adc;
-    } else {
-        samp.stats.avg = alpha * samp.stats.avg + (1.0 - alpha) * adc;
-    }
+double sampler_getAverageReading() {
+    // if (samp.stats.totalSamplesTaken == 1) {
+    //     samp.stats.avg = adc;
+    // } else {
+    //     samp.stats.avg = alpha * samp.stats.avg + (1.0 - alpha) * adc;
+    // }
+    // double avg = samp.stats.avg;
+    pthread_mutex_lock(&samp.lock);
     double avg = samp.stats.avg;
+    pthread_mutex_unlock(&samp.lock);
     return avg;
+    // return avg;
+    
 }
 
 /**
@@ -308,7 +325,7 @@ int sampler_getHistDips(){
     DIP_EVENTS state = ARMED;
 
     for (int i = 0; i < n; i++){
-        currEma = sampler_getAverageReading(hist[i]);
+        currEma = sampler_getAverageReading();
         
         if (!dip_detected && latestSample <= currEma - DIP_TRIG){
             dip_detected = true;
@@ -346,26 +363,27 @@ void* samplerThread(void* arg) {
     while (atomic_load(&running)) {
 
         // Direct ADC read (don't use getCurrentReading to avoid double-locking)
-        int raw = read_adc_ch(spi_fd, adc_channel, DEV_SPEED);
-        if (raw < 0) {
+        int val = read_adc_ch(spi_fd, adc_channel, DEV_SPEED);
+        if (val < 0) {
             fprintf(stderr, "sampler: ADC read failed\n");
             sleep_ms(SAMPLE_INTERVAL_MS);
             continue;
         }
         
         // Clamp to valid range
-        if (raw > (int)MAX_ADCVALUE) {
-            raw = (int)MAX_ADCVALUE;
+        if (val > (int)MAX_ADCVALUE) {
+            val = (int)MAX_ADCVALUE;
         }
-        double adcVal = (double)raw;
+        double adcVal = (double)val;
 
         pthread_mutex_lock(&samp.lock);
+
         // Update running statistics
-        samp.stats.totalSamplesTaken++;
         if (samp.buffer.size < MAX_SAMPLESPERSECOND) {
             samp.buffer.samples[samp.buffer.size++] = adcVal;
+            samp.stats.totalSamplesTaken++;
         }
-        double avg = sampler_getAverageReading(adcVal);
+        // double avg = sampler_getAverageReading(adcVal);
 
         pthread_mutex_unlock(&samp.lock);
         
@@ -375,12 +393,29 @@ void* samplerThread(void* arg) {
          // struct timespec last_rotation = {0, 0};
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
-         time_t dsec = now.tv_sec - last_rotation.tv_sec;
+
+        time_t dsec = now.tv_sec - last_rotation.tv_sec;
         long   dnsec = now.tv_nsec - last_rotation.tv_nsec;
         if (dnsec < 0) { dsec -= 1; dnsec += 1000000000L; }
 
         if (dsec >= 1) {
-            sampler_moveCurrentDataToHistory();   // locks internally
+            pthread_mutex_lock(&samp.lock);
+
+            free(samp.history.samples);
+            samp.history.samples = NULL;
+            samp.history.size = 0;
+
+            if (samp.buffer.size > 0 && samp.buffer.samples) {
+                samp.history.samples = malloc(sizeof(double) * (size_t)samp.buffer.size);
+                if (samp.history.samples) {
+                    memcpy(samp.history.samples, samp.buffer.samples,
+                            sizeof(double) * (size_t)samp.buffer.size);
+                    samp.history.size = samp.buffer.size;
+                }
+            }
+            samp.buffer.size = 0;  
+            pthread_mutex_unlock(&samp.lock);             
+            sampler_moveCurrentDataToHistory();     // locks internally
             Period_markEvent(PERIOD_EVENT_SAMPLE_FINAL);
             last_rotation = now;
         }
@@ -388,4 +423,13 @@ void* samplerThread(void* arg) {
         sleep_ms(SAMPLE_INTERVAL_MS);
     }
     return NULL;
+}
+
+/**
+ * @brief Get the sampler handle
+ * 
+ * @return Sampler* 
+ */
+Sampler* sampler_getHandle(void) {
+    return &samp;
 }

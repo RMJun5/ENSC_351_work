@@ -164,7 +164,7 @@ double* sampler_getHistory(int* size);
 //Get current data read by sensors
 double sampler_getCurrentReading();
 // Get the average light level (not tied to the history)
-double sampler_getAverageReading(double adc);
+double sampler_getAverageReading();
 // Get the number of Dips
 int sampler_getHistDips(void);
 
@@ -172,5 +172,7 @@ int sampler_getHistDips(void);
 long long sampler_getNumSamplesTaken();
 
 void* samplerThread(void* arg);
+
+Sampler* sampler_getHandle(void);
 
 #endif

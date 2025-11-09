@@ -8,11 +8,12 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>
 #include <unistd.h>
 
 Period_statistics_t stats;
-static bool running = false;
 static double samples[1000];
+// static Sampler samp;
 
 /**
  * @brief Check if 1 second has elapsed
@@ -20,23 +21,31 @@ static double samples[1000];
  * @return true
  * @return false 
  */
-bool timeElapsed(){
+bool timeElapsed(void) {
+    static struct timespec prev = {0, 0};
+    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
-    struct timespec current, prev;
-    prev.tv_sec = 0;
-    prev.tv_nsec = 0;
-    current.tv_sec = 0;
-    current.tv_nsec = 0;
-
+    struct timespec current;
     clock_gettime(CLOCK_MONOTONIC, &current);
 
-    if (current.tv_nsec == 0 && current.tv_sec == 0) {
-        prev = current;
+    pthread_mutex_lock(&lock);
+
+    if (prev.tv_sec == 0 && prev.tv_nsec == 0) {
+        prev = current;  // first call
+        pthread_mutex_unlock(&lock);
         return false;
     }
-    
-    double time = (current.tv_sec - prev.tv_sec) + (current.tv_nsec - prev.tv_nsec) / 1e9;
-    if (time > 1.0) { return true;}
+
+    double elapsed = (current.tv_sec - prev.tv_sec) +
+                     (current.tv_nsec - prev.tv_nsec) / 1e9;
+
+    if (elapsed >= 1.0) {
+        prev = current;  // reset timer
+        pthread_mutex_unlock(&lock);
+        return true;
+    }
+
+    pthread_mutex_unlock(&lock);
     return false;
 }
 
@@ -92,51 +101,62 @@ int main() {
     sampler_init();
     printf("%s", "Initialized the sampler\n");
 
+    Sampler* s = sampler_getHandle();
+    printf("initialized = %d\n", s->initialized);
+
     UDP_start();
     printf("%s", "Started the UDP server\n");
 
 
     int i = 0; // index
     int dips = 0;
-    double prev = 0;    // int
     double current = 0; // int
-
-    running = true;
     
-    while (running) {
+    while (s->initialized) {
 
         // get current light level
+        Period_markEvent(PERIOD_EVENT_SAMPLE_LIGHT);
         double reading = sampler_getCurrentReading();
-        samples[i] = reading;
+        current = reading;
+        samples[i] = current;
         i++;
+        i = (i + 1) % 1000; // wrap around safely
 
 
         // if the index of the array is greater than 1000, reset the index
-        if (i >= 1000) {
-            i = 0;
-        }
+        // if (i >= 1000) {
+        //     i = 0;
+        // }
 
         // if the current reading is less than 80% of the previous reading, add one to 
         // the dips counter (because the light dips hahaha)
-        if (current < prev * 0.8) {
+        double avg = sampler_getAverageReading();
+        if (current < avg - 0.1) {
             dips++;
         }
-        prev = current;
 
         // int gpio16 = read_encoder();
         // int gpio17 = read_encoder();
         int bits = read_encoder(); // returns the bits of encoder
-
         update_led(bits);
 
-        if (timeElapsed(1000000000)) {
-            printf("light level: %f\nDips in 1s: %d\nEncoder: %d", current, dips, bits);
+        if (timeElapsed()) {
+            printf("light level: %f\nDips in 1s: %d\nEncoder: %d\n", current, dips, bits);
             Period_markEvent(PERIOD_EVENT_SAMPLE_FINAL);
+            Period_statistics_t stats, lightStats;
+            Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_FINAL, &stats);
+            Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_LIGHT, &lightStats);
+            printf("Light stats: numSamples=%d, avg=%.3fms, min=%.3fms, max=%.3fms\n",
+                    lightStats.numSamples, lightStats.avgPeriodInMs, lightStats.minPeriodInMs, lightStats.maxPeriodInMs);
+            printf("Event stats: numSamples=%d, avg=%.3fms, min=%.3fms, max=%.3fms\n",
+                    stats.numSamples, stats.avgPeriodInMs, stats.minPeriodInMs, stats.maxPeriodInMs);
+
+            sampler_moveCurrentDataToHistory();
             dips = 0;
         }
 
         //UDP_poll();
-        usleep(10000);
+        usleep(1000); // sleep for 1ms
 
     }
     //  for (int i = 0; i < 1000; i++) {
@@ -169,10 +189,9 @@ int main() {
     // Cleanup
     UDP_stop();
     sampler_cleanup();
-    Period_cleanup();
+    clean_encoder(); 
     led_cleanup();
-    clean_encoder();   
-    running = false; 
+    Period_cleanup();  
     
     return 0;
 }
