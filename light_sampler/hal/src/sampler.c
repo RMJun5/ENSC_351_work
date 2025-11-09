@@ -215,7 +215,7 @@ double sampler_getCurrentReading() {
     int val = read_adc_ch(fd, adc_channel, DEV_SPEED);
     if (val < 0) {
         perror("read_adc_ch failed");
-        return;
+        return -1.0;
     }
     double adcVal = (double)val;
      // int read_adc_ch(int fd, int ch, uint32_t speed_hz) better practice
