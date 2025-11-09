@@ -43,6 +43,7 @@ bool timeElapsed(void) {
 
     double elapsed = (current.tv_sec - prev.tv_sec) +
                      (current.tv_nsec - prev.tv_nsec) / 1e9;
+    if (elapsed < 0) elapsed = 0;
 
     if (elapsed >= 1.0) {
         prev = current;  // reset timer
@@ -60,7 +61,8 @@ bool timeElapsed(void) {
  * @param encoder_bits the bits of GPIO pins 22 and 27 of the encoder
  */
 void update_led(int encoder_bits) {
- static int pwm_period_ns = 1000000000; // default 1s
+    static int pwm_period_ns = 1000000000; // default 1s
+    //pwm_duty_ns = pwm_period_ns / 2;
     static int pwm_duty_ns = 500000000;    // 50%
     static int last_period_ns = 0;
 
@@ -127,6 +129,8 @@ int main() {
     int i = 0; // index
     int dips = 0;
     double current = 0; // int
+
+    //
     
     while (s->initialized) {
 
@@ -157,7 +161,7 @@ int main() {
         update_led(bits);
 
         if (timeElapsed()) {
-            printf("Names: Richard Kim and Kirsten Horvat \n");
+            printf("Names: Richard Kim and Kirstin Horvat \n");
             printf("light level: %f\nDips in 1s: %d\nEncoder: %d\n", current, dips, bits);
             Period_markEvent(PERIOD_EVENT_SAMPLE_FINAL);
             Period_statistics_t stats, lightStats;
@@ -172,7 +176,7 @@ int main() {
             dips = 0;
         }
 
-        //UDP_poll();
+       // UDP_poll();
         usleep(1000); // sleep for 1ms
 
     }
