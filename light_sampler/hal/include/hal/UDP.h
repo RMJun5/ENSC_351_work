@@ -25,7 +25,7 @@ typedef struct {
     int clen;
 } UDP;
 
-void* UDPThread(void* arg);
+// static void* UDPThread(void* arg);
 
 void UDP_help (void);
 void UDP_question (void);
