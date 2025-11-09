@@ -24,8 +24,7 @@ void swapContent(double *d1, double *d2)
  */
 void tradeArrays(double *array1, double *array2, int size)
 {
-	unsigned int i;
-	for (i = size-1; i >= 0; i--) {
+	for (int i = size-1; i >= 0; i--) {
 		swapContent(array1+i, array2+i);
 	}
 }
