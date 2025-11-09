@@ -15,6 +15,10 @@
 Period_statistics_t stats;
 static double samples[1000];
 
+#define MIN_FREQ 0      // 0 Hz
+#define MAX_FREQ 500    // 500 Hz
+#define INIT_FREQ 10    // 10 Hz
+
 #define MIN_PERIOD_NS 200000000  // 0.2 s, adjust for your hardware
 #define MAX_PERIOD_NS 1000000000 // 1 s, adjust for your hardware
 
@@ -56,34 +60,52 @@ bool timeElapsed(void) {
 }
 
 /**
+ * @brief Read the bits of GPIO pins 22 and 27 of the encoder
+ *
+ * @return int a value of 0, 1, 2, or 3
+ */
+int read_encoder_step(void) {
+    static int last_bits = 0;
+    int bits = read_encoder();  // returns 0,1,2,3
+
+    int step = 0;
+    if (bits == (last_bits + 1) % 4) step = 1;       // clockwise
+    else if (bits == (last_bits + 3) % 4) step = -1; // counter-clockwise
+
+    last_bits = bits;
+    return step;
+}
+
+
+/**
  * @brief Update the speed of the LED when the encoder is turned
  * 
  * @param encoder_bits the bits of GPIO pins 22 and 27 of the encoder
  */
-void update_led(int encoder_bits) {
-    static int pwm_period_ns = 1000000000; // default 1s
-    //pwm_duty_ns = pwm_period_ns / 2;
-    static int pwm_duty_ns = 500000000;    // 50%
+void update_led() {
+
+    static int freq_hz = INIT_FREQ;  // start at 10 Hz
+    int step = read_encoder_step();  // returns +1 or -1 per step
+
+    // Update frequency
+    freq_hz += step;
+    if (freq_hz < MIN_FREQ) freq_hz = MIN_FREQ;
+    if (freq_hz > MAX_FREQ) freq_hz = MAX_FREQ;
+
+    // Convert frequency to PWM period in ns
+    int period_ns = (freq_hz > 0) ? 1000000000 / freq_hz : 1000000000; // 0Hz -> very long period
+    int duty_ns = period_ns / 2;  // 50% duty cycle
+
+    // Only update if period changed
     static int last_period_ns = 0;
-
-    switch (encoder_bits) {
-        case 0: pwm_period_ns = 800000000; break; // faster blink
-        case 1: pwm_period_ns = 600000000; break;
-        case 2: pwm_period_ns = 400000000; break;
-        case 3: pwm_period_ns = 200000000; break; // very fast
+    if (period_ns != last_period_ns) {
+        led_set_parameters(period_ns, duty_ns);
+        last_period_ns = period_ns;
     }
 
-    // Clamp period to safe hardware limits
-    if (pwm_period_ns < MIN_PERIOD_NS) pwm_period_ns = MIN_PERIOD_NS;
-    if (pwm_duty_ns > pwm_period_ns) pwm_duty_ns = pwm_period_ns;
-    // Only update LED if period changed
-    if (pwm_period_ns != last_period_ns) {
-        led_set_parameters(pwm_period_ns, pwm_duty_ns);
-        last_period_ns = pwm_period_ns;
-    }
+    printf("LED frequency: %d Hz, period: %d ns, duty: %d ns\n",
+           freq_hz, period_ns, duty_ns);
 
-    printf("pwm_period_ns = %d\n", pwm_period_ns);
-//    led_set_parameters(pwm_period_ns, pwm_duty_ns);
 }
 
 /**
@@ -101,8 +123,6 @@ int count_light_dips(double *samples, int n) {
     }
     return dips;
 }
-
-
 
 int main() {
 
@@ -129,8 +149,6 @@ int main() {
     int i = 0; // index
     int dips = 0;
     double current = 0; // int
-
-    //
     
     while (s->initialized) {
 
@@ -142,11 +160,8 @@ int main() {
         i++;
         i = (i + 1) % 1000; // wrap around safely
 
-        
-        // if the index of the array is greater than 1000, reset the index
-        // if (i >= 1000) {
-        //     i = 0;
-        // }
+        // i = (i + 1) % 1000;
+        // samples[i] = current;
 
         // if the current reading is less than 80% of the previous reading, add one to 
         // the dips counter (because the light dips hahaha)
@@ -155,14 +170,13 @@ int main() {
             dips++;
         }
 
-        // int gpio16 = read_encoder();
-        // int gpio17 = read_encoder();
-        int bits = read_encoder(); // returns the bits of encoder
-        update_led(bits);
+        // int bits = read_encoder(); // returns the bits of encoder
+        // update_led(bits);
+        update_led();
 
         if (timeElapsed()) {
             printf("Names: Richard Kim and Kirstin Horvat \n");
-            printf("light level: %f\nDips in 1s: %d\nEncoder: %d\n", current, dips, bits);
+            //printf("light level: %f\nDips in 1s: %d\nEncoder: %d\n", current, dips, bits);
             Period_markEvent(PERIOD_EVENT_SAMPLE_FINAL);
             Period_statistics_t stats, lightStats;
             Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_FINAL, &stats);
@@ -176,36 +190,9 @@ int main() {
             dips = 0;
         }
 
-       // UDP_poll();
         usleep(1000); // sleep for 1ms
 
     }
-    //  for (int i = 0; i < 1000; i++) {
-
-    //     int val = read_encoder();
-    //     printf("Encoder bits: %d (GPIO16=%d, GPIO17=%d)\n", val, (val >> 1) & 1, val & 1);
-    //     // wait 100ms
-
-
-    //     // get current reading
-    //     //double reading = sampler_getCurrentReading();
-
-    //     // every 1s: rotate history and mark event
-    //     static int counter = 0;
-    //     counter++;
-    //     if (counter >= 10) { // 10 * 0.1s = 1s
-    //         Period_markEvent(PERIOD_EVENT_SAMPLE_FINAL);
-    //         counter = 0;
-    //     }
-    // }
-
-    // // Print statistics
-    // Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_LIGHT, &stats);
-    // printf("Light sensor statistics:\n");
-    // printf("  Num samples: %lld\n", sampler_getNumSamplesTaken());
-    // printf("  Avg period (ms): %.3f\n", stats.avgPeriodInMs);
-    // printf("  Min period (ms): %.3f\n", stats.minPeriodInMs);
-    // printf("  Max period (ms): %.3f\n", stats.maxPeriodInMs);
 
     // Cleanup
     UDP_stop();

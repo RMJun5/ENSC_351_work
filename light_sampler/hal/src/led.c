@@ -7,6 +7,9 @@
 #include <stdbool.h>
 #include <string.h>
 const uint32_t MAX_PERIOD = 469754879;
+#define MIN_FREQ 0
+#define MAX_FREQ 500
+#define INIT_FREQ 10
 
 static bool led_initialized = false;
 
@@ -90,4 +93,3 @@ void led_cleanup() {
     write2file(PWM_PATH_ENABLE, "0");
     led_initialized = false;
 }
-
