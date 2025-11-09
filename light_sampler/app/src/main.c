@@ -96,9 +96,6 @@ int main() {
     printf("%s", "Initialized the encoder\n");
 
     led_init();
-    luint32_t start_period = (uint32_t)(1e9 / curr_hz);
-    uint32_t start_duty   = start_period / 2;
-    led_set_parameters(start_period, start_duty);
     printf("%s", "Initialized the LED\n");
 
     sampler_init();
@@ -145,7 +142,6 @@ int main() {
 
         if (timeElapsed()) {
             printf("Names: Richard Kim and Kirsten Horvat \n");
-            printf("LED frequency: %.1f Hz\n", curr_hz);
             printf("light level: %f\nDips in 1s: %d\nEncoder: %d\n", current, dips, bits);
             Period_markEvent(PERIOD_EVENT_SAMPLE_FINAL);
             Period_statistics_t stats, lightStats;
