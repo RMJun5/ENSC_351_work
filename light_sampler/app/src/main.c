@@ -117,11 +117,17 @@ void update_led() {
  * @param n the length of the array
  * @return int the number of dips
  */
-int count_light_dips(double *samples, int n) {
+int count_light_dips(double *samples, int n, double avg) {
     int dips = 0;
-    for (int i = 1; i < n; i++) {
-        if (samples[i] < samples[i - 1] * 0.8)
+    bool inDip = false;
+
+    for (int i = 0; i < n; i++) {
+        if (!inDip && samples[i] < avg - 0.1) {
             dips++;
+            inDip = true;
+        } else if (inDip && samples[i] >= avg - 0.07) {
+            inDip = false;
+        }
     }
     return dips;
 }
@@ -159,26 +165,25 @@ int main() {
         double reading = sampler_getCurrentReading();
         current = reading;
         samples[i] = current;
-        i++;
+        // i++;
         i = (i + 1) % 1000; // wrap around safely
 
         // i = (i + 1) % 1000;
         // samples[i] = current;
 
-        // if the current reading is less than 80% of the previous reading, add one to 
-        // the dips counter (because the light dips hahaha)
-        double avg = sampler_getAverageReading();
-        if (current < avg - 0.1) {
-            dips++;
-        }
-
+        double sum = 0;
+        int numSamples = (i < 1000) ? i : 1000; // number of valid samples
+        for (int j = 0; j < numSamples; j++) sum += samples[j];
+        double avg = sum / numSamples;
+        //static bool inDip = false;
+        dips = count_light_dips(samples, 1000, avg);
         // int bits = read_encoder(); // returns the bits of encoder
         // update_led(bits);
         update_led();
 
         if (timeElapsed()) {
             printf("Names: Richard Kim and Kirstin Horvat \n");
-            //printf("light level: %f\nDips in 1s: %d\nEncoder: %d\n", current, dips, bits);
+            printf("light level: %f\nDips in 1s: %d\n", current, dips);
             Period_markEvent(PERIOD_EVENT_SAMPLE_FINAL);
             Period_statistics_t stats, lightStats;
             Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_FINAL, &stats);
