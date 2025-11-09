@@ -30,13 +30,12 @@ static UDP udp = {
     .sock = -1,
     .running = ATOMIC_VAR_INIT(false), // active
     .shutdown= ATOMIC_VAR_INIT(false),
-    .clen = sizeof(struct sockaddr_in)
+    .clen = 0
 };
 
 static pthread_t UDPListenerID;
 static bool UDPstarted = false;
 static struct sockaddr_in client;
-static socklen_t clen = 0;
 
 static char last_cmd[64]={0};
 
@@ -95,8 +94,10 @@ void UDP_stop(void){
     pthread_join(UDPListenerID, NULL);
 
     // close(udp.sock);
-    if (udp.sock >= 0) close(udp.sock);
-    udp.sock = -1;
+    if (udp.sock >= 0) {
+        if (close(udp.sock) < 0) perror("close(udp.sock)");
+        udp.sock = -1;
+    }
     atomic_store(&udp.running, false);
 
     // udp.sock = -1;
@@ -107,7 +108,7 @@ void UDP_stop(void){
 void send_text(const char *text ) {
 
     // Make sure it uses the global socket
-    if (clen == 0 || udp.sock < 0) return;
+    if (udp.clen == 0 || udp.sock < 0|| client.sin_port == 0) return;
 
     //sendto(udp.sock, text, strlen(text), 0, (struct sockaddr*)&client, clen);
 
@@ -136,7 +137,7 @@ void send_text(const char *text ) {
         //     cut = chunk;
         // }
         // if (clen == 0 || udp.sock < 0) return;
-        sendto(udp.sock,cursor,cut,0,&client , clen);
+        sendto(udp.sock,cursor,cut,0,&client , udp.clen);
         cursor += cut;
         len -= cut;
     }
@@ -443,7 +444,6 @@ void* UDPThread(void* arg) {
         FD_ZERO(&rfds);
         FD_SET(udp.sock, &rfds);
         struct timeval tv = { .tv_sec = 0, .tv_usec = 200000 }; // 200 ms
-        
         int r = select(udp.sock + 1, &rfds, NULL, NULL, &tv);
 
         if (r < 0) {
