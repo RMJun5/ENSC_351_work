@@ -60,7 +60,7 @@ bool timeElapsed(void) {
  * @param encoder_bits the bits of GPIO pins 22 and 27 of the encoder
  */
 void update_led(int encoder_bits) {
-    static int pwm_period_ns = 1000000000; // default 1s
+ static int pwm_period_ns = 1000000000; // default 1s
     static int pwm_duty_ns = 500000000;    // 50%
     static int last_period_ns = 0;
 
@@ -138,7 +138,7 @@ int main() {
         i++;
         i = (i + 1) % 1000; // wrap around safely
 
-
+        
         // if the index of the array is greater than 1000, reset the index
         // if (i >= 1000) {
         //     i = 0;
@@ -157,6 +157,7 @@ int main() {
         update_led(bits);
 
         if (timeElapsed()) {
+            printf("Names: Richard Kim and Kirsten Horvat \n");
             printf("light level: %f\nDips in 1s: %d\nEncoder: %d\n", current, dips, bits);
             Period_markEvent(PERIOD_EVENT_SAMPLE_FINAL);
             Period_statistics_t stats, lightStats;
