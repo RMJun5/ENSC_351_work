@@ -60,22 +60,24 @@ bool timeElapsed(void) {
 }
 
 /**
- * @brief Read the bits of GPIO pins 22 and 27 of the encoder
- *
- * @return int a value of 0, 1, 2, or 3
+ * @brief Read the bits of GPIO pins 22 and 27 of the encoder and return 0,1,2,3
+ * 
+ * @return int 
  */
-int read_encoder_step(void) {
+int read_encoder_step_debounced(void) {
     static int last_bits = 0;
     int bits = read_encoder();  // returns 0,1,2,3
 
     int step = 0;
-    if (bits == (last_bits + 1) % 4) step = 1;       // clockwise
-    else if (bits == (last_bits + 3) % 4) step = -1; // counter-clockwise
+    int delta = bits - last_bits;
+
+    if (delta == 1 || delta == -3) step = 1;       // clockwise
+    else if (delta == -1 || delta == 3) step = -1; // counter-clockwise
+    // else step = 0; // any jump that is not 1 or -1 is ignored
 
     last_bits = bits;
     return step;
 }
-
 
 /**
  * @brief Update the speed of the LED when the encoder is turned
@@ -85,27 +87,27 @@ int read_encoder_step(void) {
 void update_led() {
 
     static int freq_hz = INIT_FREQ;  // start at 10 Hz
-    int step = read_encoder_step();  // returns +1 or -1 per step
+   static int last_freq_hz = 0;    // track last applied frequency
+
+    // read rotary encoder step: +1 or -1
+    int step = read_encoder_step_debounced();
 
     // Update frequency
     freq_hz += step;
     if (freq_hz < MIN_FREQ) freq_hz = MIN_FREQ;
     if (freq_hz > MAX_FREQ) freq_hz = MAX_FREQ;
 
-    // Convert frequency to PWM period in ns
-    int period_ns = (freq_hz > 0) ? 1000000000 / freq_hz : 1000000000; // 0Hz -> very long period
-    int duty_ns = period_ns / 2;  // 50% duty cycle
+    // Only update LED if frequency changed
+    if (freq_hz != last_freq_hz) {
+        int period_ns = (freq_hz > 0) ? 1000000000 / freq_hz : 1000000000; // 0Hz -> very long period
+        int duty_ns   = period_ns / 2;  // 50% duty
 
-    // Only update if period changed
-    static int last_period_ns = 0;
-    if (period_ns != last_period_ns) {
         led_set_parameters(period_ns, duty_ns);
-        last_period_ns = period_ns;
+        last_freq_hz = freq_hz;
+
+        printf("LED frequency: %d Hz, period: %d ns, duty: %d ns\n",
+               freq_hz, period_ns, duty_ns);
     }
-
-    printf("LED frequency: %d Hz, period: %d ns, duty: %d ns\n",
-           freq_hz, period_ns, duty_ns);
-
 }
 
 /**

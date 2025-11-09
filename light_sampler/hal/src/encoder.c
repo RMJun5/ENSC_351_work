@@ -42,8 +42,8 @@ void encoder_init() {
         goto error;
     }
     gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_INPUT);
-    gpiod_line_settings_set_bias(settings, GPIOD_LINE_BIAS_PULL_UP);
-    //gpiod_line_settings_set_edge_detection(settings, GPIOD_LINE_EDGE_BOTH); // Edge detection
+    //gpiod_line_settings_set_bias(settings, GPIOD_LINE_BIAS_PULL_UP);
+    gpiod_line_settings_set_edge_detection(settings, GPIOD_LINE_EDGE_BOTH); // Edge detection
     
     // 3. Create line config and request the line
     config = gpiod_line_config_new();
@@ -87,11 +87,13 @@ int read_encoder() {
         printf("Failed to read encoder lines: %s\n", strerror(errno));
         return -1;
     }
-    printf("A=%d, B=%d\n", values[0], values[1]);
+    //printf("A=%d, B=%d\n", values[0], values[1]);
 
     // Pack A/B into a single number (bitwise)
     return (values[0] << 1) | values[1];
 }
+
+
 
 void clean_encoder() {
 
