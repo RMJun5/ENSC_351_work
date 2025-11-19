@@ -1,7 +1,10 @@
 
 #include <stdio.h>
-
+#include "beatbox.h"
 int main(void) {
-    printf("Hello World!\n");
+    beatboxInit();
+    
+    beatboxCleanup();
+
     return 0;
 }

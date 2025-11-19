@@ -8,3 +8,9 @@ file(GLOB MY_SOURCES "src/*.c")
 add_library(hal STATIC ${MY_SOURCES})
 
 target_include_directories(hal PUBLIC include)
+
+add_custom_command(TARGET server POST_BUILD 
+  COMMAND "${CMAKE_COMMAND}" -E copy 
+     "$<TARGET_FILE:server>"
+     "~/ensc351/public/myApps/beatbox-server-copy" 
+  COMMENT "Copying NodeJS server to public NFS directory")
