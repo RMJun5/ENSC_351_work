@@ -2,8 +2,8 @@
 #include "hal/encoder.h"
 #include <errno.h>
 #include <string.h>
-// GPIO 27 and 22
-unsigned int LINE_OFFSET[] = {33, 41};      // The offset of the GPIO line you want to control (e.g., GPIO16)
+// GPIO 27 (A) and 22 (B)
+unsigned int LINE_OFFSET[] = {33, 41};
 int num;
 
 struct gpiod_chip *chip;
@@ -17,9 +17,9 @@ const char *CHIPNAME = "/dev/gpiochip1"; // The GPIO chip for pins GPIO 22 and 2
 
 /**
  * @brief Initialize the encoder
- * 
+ * @param PIN the offset value of the pin we want to read
  */
-void encoder_init() {
+void encoder_init(int PIN) {
     chip = NULL;
     settings = NULL;
     config = NULL;
@@ -43,7 +43,8 @@ void encoder_init() {
     }
     gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_INPUT);
     //gpiod_line_settings_set_bias(settings, GPIOD_LINE_BIAS_PULL_UP);
-    gpiod_line_settings_set_edge_detection(settings, GPIOD_LINE_EDGE_BOTH); // Edge detection
+    // sets edge detection to only the
+    if (PIN == 27) {gpiod_line_settings_set_edge_detection(settings, GPIOD_LINE_EDGE_BOTH );}// Edge detection
     
     // 3. Create line config and request the line
     config = gpiod_line_config_new();
@@ -51,7 +52,7 @@ void encoder_init() {
         printf("%s", "Cannot get line config");
         goto error;
     }
-    gpiod_line_config_add_line_settings(config, LINE_OFFSET, 2, settings);
+    gpiod_line_config_add_line_settings(config, PIN, settings);
 
 
     // 4. Create request config
@@ -70,15 +71,15 @@ void encoder_init() {
         goto error;
     }
 
-    printf("Encoder initialized on GPIOs %u and %u\n", LINE_OFFSET[0], LINE_OFFSET[1]);
+    printf("Encoder initialized on GPIO %u\n", PIN);
     return;
 
     error:
-        clean_encoder(); // cleans only whatâs been allocated so far
+        clean_encoder(); // cleans only whats been allocated so far
         return;
 }
 
-int read_encoder() {
+Rotation read_encoder() {
     if (!request) return -1;
 
     int values[2];
@@ -87,14 +88,15 @@ int read_encoder() {
         printf("Failed to read encoder lines: %s\n", strerror(errno));
         return -1;
     }
-    //printf("A=%d, B=%d\n", values[0], values[1]);
+    printf("A=%d, B=%d\n", values[0], values[1]);
+
 
     // Pack A/B into a single number (bitwise)
-    return (values[0] << 1) | values[1];
+    // (values[0] << 1) | values[1];
 
-    // instead, return the values
-
-}
+    // instead, return a direction enum:
+    if (values[0] != values[1]) {return CW;}
+    else if (values[0] == values[1]) {return CCW;}
 
 
 
