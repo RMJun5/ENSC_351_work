@@ -11,7 +11,7 @@ int main(void) {
 
     AudioMixer_init();
 
-    AudioMixer_readWaveFileIntoMemory("./audio/wave-files/100059__menegass__Gui_DRUM_SNARE_soft.wav", &beatSound);
+    AudioMixer_readWaveFileIntoMemory("/mnt/remote/myApps/wave-files/100054__menegass__gui-drum-ch.wav", &beatSound);
 
     AudioMixer_queueSound(&beatSound);
 

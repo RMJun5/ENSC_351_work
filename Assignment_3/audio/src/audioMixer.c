@@ -223,7 +223,7 @@ void AudioMixer_setVolume(int newVolume)
     snd_mixer_selem_id_t *sid;
     const char *card = "default";
     // const char *selem_name = "PCM";	// For ZEN cape
-    const char *selem_name = "Speaker";	// For USB Audio
+    const char *selem_name = "Master";	// For USB Audio (Master on Ks board)
 
     snd_mixer_open(&mixerHandle, 0);
     snd_mixer_attach(mixerHandle, card);
