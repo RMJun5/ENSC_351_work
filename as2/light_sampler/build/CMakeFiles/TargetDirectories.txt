@@ -1,0 +1,8 @@
+/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/build/CMakeFiles/edit_cache.dir
+/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/build/CMakeFiles/rebuild_cache.dir
+/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/build/hal/CMakeFiles/hal.dir
+/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/build/hal/CMakeFiles/edit_cache.dir
+/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/build/hal/CMakeFiles/rebuild_cache.dir
+/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/build/app/CMakeFiles/out.dir
+/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/build/app/CMakeFiles/edit_cache.dir
+/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/build/app/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,2 @@
+/usr/bin/aarch64-linux-gnu-ar qc libhal.a CMakeFiles/hal.dir/src/UDP.c.o CMakeFiles/hal.dir/src/encoder.c.o CMakeFiles/hal.dir/src/help.c.o CMakeFiles/hal.dir/src/led.c.o CMakeFiles/hal.dir/src/periodTimer.c.o CMakeFiles/hal.dir/src/sampler.c.o
+/usr/bin/aarch64-linux-gnu-ranlib libhal.a

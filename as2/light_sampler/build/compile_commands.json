@@ -1,0 +1,50 @@
+[
+{
+  "directory": "/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/build/hal",
+  "command": "/usr/bin/aarch64-linux-gnu-gcc --sysroot=/home/kbph/ENSC_351/public/byai-sysroot  -I/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/include -I/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/hal/include -g -std=gnu11 -pthread -o CMakeFiles/hal.dir/src/UDP.c.o -c /home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/src/UDP.c",
+  "file": "/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/src/UDP.c",
+  "output": "hal/CMakeFiles/hal.dir/src/UDP.c.o"
+},
+{
+  "directory": "/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/build/hal",
+  "command": "/usr/bin/aarch64-linux-gnu-gcc --sysroot=/home/kbph/ENSC_351/public/byai-sysroot  -I/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/include -I/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/hal/include -g -std=gnu11 -pthread -o CMakeFiles/hal.dir/src/encoder.c.o -c /home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/src/encoder.c",
+  "file": "/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/src/encoder.c",
+  "output": "hal/CMakeFiles/hal.dir/src/encoder.c.o"
+},
+{
+  "directory": "/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/build/hal",
+  "command": "/usr/bin/aarch64-linux-gnu-gcc --sysroot=/home/kbph/ENSC_351/public/byai-sysroot  -I/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/include -I/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/hal/include -g -std=gnu11 -pthread -o CMakeFiles/hal.dir/src/help.c.o -c /home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/src/help.c",
+  "file": "/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/src/help.c",
+  "output": "hal/CMakeFiles/hal.dir/src/help.c.o"
+},
+{
+  "directory": "/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/build/hal",
+  "command": "/usr/bin/aarch64-linux-gnu-gcc --sysroot=/home/kbph/ENSC_351/public/byai-sysroot  -I/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/include -I/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/hal/include -g -std=gnu11 -pthread -o CMakeFiles/hal.dir/src/led.c.o -c /home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/src/led.c",
+  "file": "/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/src/led.c",
+  "output": "hal/CMakeFiles/hal.dir/src/led.c.o"
+},
+{
+  "directory": "/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/build/hal",
+  "command": "/usr/bin/aarch64-linux-gnu-gcc --sysroot=/home/kbph/ENSC_351/public/byai-sysroot  -I/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/include -I/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/hal/include -g -std=gnu11 -pthread -o CMakeFiles/hal.dir/src/periodTimer.c.o -c /home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/src/periodTimer.c",
+  "file": "/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/src/periodTimer.c",
+  "output": "hal/CMakeFiles/hal.dir/src/periodTimer.c.o"
+},
+{
+  "directory": "/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/build/hal",
+  "command": "/usr/bin/aarch64-linux-gnu-gcc --sysroot=/home/kbph/ENSC_351/public/byai-sysroot  -I/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/include -I/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/hal/include -g -std=gnu11 -pthread -o CMakeFiles/hal.dir/src/sampler.c.o -c /home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/src/sampler.c",
+  "file": "/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/src/sampler.c",
+  "output": "hal/CMakeFiles/hal.dir/src/sampler.c.o"
+},
+{
+  "directory": "/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/build/app",
+  "command": "/usr/bin/aarch64-linux-gnu-gcc --sysroot=/home/kbph/ENSC_351/public/byai-sysroot  -I/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/app/include -I/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/include -g -std=gnu11 -pthread -Wall -Werror -Wpedantic -Wextra -fdiagnostics-color -fsanitize=address -o CMakeFiles/out.dir/src/main.c.o -c /home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/app/src/main.c",
+  "file": "/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/app/src/main.c",
+  "output": "app/CMakeFiles/out.dir/src/main.c.o"
+},
+{
+  "directory": "/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/build/app",
+  "command": "/usr/bin/aarch64-linux-gnu-gcc --sysroot=/home/kbph/ENSC_351/public/byai-sysroot  -I/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/app/include -I/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/hal/include -g -std=gnu11 -pthread -Wall -Werror -Wpedantic -Wextra -fdiagnostics-color -fsanitize=address -o CMakeFiles/out.dir/src/noworky.c.o -c /home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/app/src/noworky.c",
+  "file": "/home/kbph/ENSC_351/public/myApps/ENSC_351_work/light_sampler/app/src/noworky.c",
+  "output": "app/CMakeFiles/out.dir/src/noworky.c.o"
+}
+]

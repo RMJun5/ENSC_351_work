@@ -1,0 +1,1 @@
+/usr/bin/aarch64-linux-gnu-gcc --sysroot=/home/kbph/ENSC_351/public/byai-sysroot -g -pthread -fsanitize=address -Wl,--dependency-file=CMakeFiles/out.dir/link.d CMakeFiles/out.dir/src/main.c.o CMakeFiles/out.dir/src/noworky.c.o -o out  ../hal/libhal.a -lgpiod -lm -lpthread

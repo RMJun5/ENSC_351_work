@@ -1,0 +1,50 @@
+{
+	"kind" : "toolchains",
+	"toolchains" : 
+	[
+		{
+			"compiler" : 
+			{
+				"id" : "GNU",
+				"implicit" : 
+				{
+					"includeDirectories" : 
+					[
+						"/usr/lib/gcc-cross/aarch64-linux-gnu/14/include",
+						"/usr/aarch64-linux-gnu/include",
+						"/home/kbph/ENSC_351/public/byai-sysroot/usr/include"
+					],
+					"linkDirectories" : 
+					[
+						"/usr/lib/gcc-cross/aarch64-linux-gnu/14",
+						"/usr/aarch64-linux-gnu/lib",
+						"/home/kbph/ENSC_351/public/byai-sysroot/usr/lib/aarch64-linux-gnu",
+						"/home/kbph/ENSC_351/public/byai-sysroot/usr/lib"
+					],
+					"linkFrameworkDirectories" : [],
+					"linkLibraries" : 
+					[
+						"gcc",
+						"gcc_s",
+						"c",
+						"gcc",
+						"gcc_s"
+					]
+				},
+				"path" : "/usr/bin/aarch64-linux-gnu-gcc",
+				"version" : "14.2.0"
+			},
+			"language" : "C",
+			"sourceFileExtensions" : 
+			[
+				"c",
+				"m"
+			]
+		}
+	],
+	"version" : 
+	{
+		"major" : 1,
+		"minor" : 0
+	}
+}
