@@ -42,7 +42,7 @@ typedef struct {
 static playbackSound_t soundBites[MAX_SOUND_BITES];
 
 // Playback threading
-void* playbackThread(void* arg);
+void* playbackThread();
 static _Bool stopping = false;
 static pthread_t playbackThreadId;
 static pthread_mutex_t audioMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -57,6 +57,9 @@ void AudioMixer_init(void)
 	// REVISIT:- Implement this. Hint: set the pSound pointer to NULL for each
 	//     sound bite.
 
+	for (int i = 0; i < MAX_SOUND_BITES; i++) {
+		soundBites[i].pSound = NULL;
+	}
 
 
 
@@ -145,6 +148,7 @@ void AudioMixer_queueSound(wavedata_t *pSound)
 	// Ensure we are only being asked to play "good" sounds:
 	assert(pSound->numSamples > 0);
 	assert(pSound->pData);
+	pthread_mutex_lock(&audioMutex);
 
 	// Insert the sound by searching for an empty sound bite spot
 	/*
@@ -160,10 +164,16 @@ void AudioMixer_queueSound(wavedata_t *pSound)
 	 *    not being able to play another wave file.
 	 */
 
-
-
-
-
+	for (int i = 0; i < MAX_SOUND_BITES; i++) {
+		if (soundBites[i].pSound == NULL) {
+			soundBites[i].pSound = pSound;
+			soundBites[i].location = 0;
+			pthread_mutex_unlock(&audioMutex);
+			return;
+		}
+	}
+	printf("Error: No free slots for sound\n");
+	return;
 }
 
 void AudioMixer_cleanup(void)
@@ -296,7 +306,7 @@ static void fillPlaybackBuffer(short *buff, int size)
 }
 
 
-void* playbackThread(void* _arg)
+void* playbackThread()
 {
 	
 	while (!stopping) {
@@ -317,7 +327,7 @@ void* playbackThread(void* _arg)
 					frames);
 			exit(EXIT_FAILURE);
 		}
-		if (frames > 0 && frames < playbackBufferSize) {
+		if (frames > 0 && (size_t)frames < playbackBufferSize) {
 			printf("Short write (expected %li, wrote %li)\n",
 					playbackBufferSize, frames);
 		}
