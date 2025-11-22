@@ -29,8 +29,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/horva/VSCodeProjects/ENSC_351_work/Assignment_2/light_sampler/app/src",
-      "program": "c:/Users/horva/VSCodeProjects/ENSC_351_work/Assignment_2/light_sampler/app/src/build/Debug/outDebug",
+      "cwd": "c:/Users/horva/VSCodeProjects/ENSC_351_work",
+      "program": "c:/Users/horva/VSCodeProjects/ENSC_351_work/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
