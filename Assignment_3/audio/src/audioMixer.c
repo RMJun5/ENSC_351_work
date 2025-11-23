@@ -173,6 +173,7 @@ void AudioMixer_queueSound(wavedata_t *pSound)
 		}
 	}
 	printf("Error: No free slots for sound\n");
+	pthread_mutex_unlock(&audioMutex);
 	return;
 }
 
@@ -247,61 +248,70 @@ void AudioMixer_setVolume(int newVolume)
 //    size: the number of *values* to store into buff
 static void fillPlaybackBuffer(short *buff, int size)
 {
-	for(short j=0;j<size;j++)
-	{
-		if (j > 900)
-		{
-			buff[j]=0;
-		}
-		else
-		{	if(j%100<50)
-				{buff[j]=(j%50)*100;}
-			else
-				{buff[j]=5000-(j%50)*100;}
-		}
-	}
+	// for(short j=0;j<size;j++)
+	// {
+	// 	if (j > 900)
+	// 	{
+	// 		buff[j]=0;
+	// 	}
+	// 	else
+	// 	{	if(j%100<50)
+	// 			{buff[j]=(j%50)*100;}
+	// 		else
+	// 			{buff[j]=5000-(j%50)*100;}
+	// 	}
+	// }
 	/*
 	 * REVISIT: Implement this
 	 * 1. Wipe the buff to all 0's to clear any previous PCM data.
 	 *    Hint: use memset(); read the docs about its use of size.
+
 	 * 2. Since this is called from a background thread, and soundBites[] array
 	 *    may be used by any other thread, must synchronize this.
+	 *
 	 * 3. Loop through each slot in soundBites[], which are sounds that are either
 	 *    waiting to be played, or partially already played:
 	 *    - If the sound bite slot is unused, do nothing for this slot.
+
 	 *    - Otherwise "add" this sound bite's data to the play-back buffer
 	 *      (other sound bites needing to be played back will also add to the same data).
+
 	 *      * Record that this portion of the sound bite has been played back by incrementing
 	 *        the location inside the data where play-back currently is.
-	 *      * If you have now played back the entire sample, free the slot in the
-	 *        soundBites[] array.
-	 *
-	 * Notes on "adding" PCM samples:
-	 * - PCM is stored as signed shorts (between SHRT_MIN and SHRT_MAX).
-	 * - When adding values, ensure there is not an overflow. Any values which would
-	 *   greater than SHRT_MAX should be clipped to SHRT_MAX; likewise for underflow.
-	 * - Don't overflow any arrays!
-	 * - Efficiency matters here! The compiler may do quite a bit for you, but it doesn't
-	 *   hurt to keep it in mind. Here are some tips for efficiency and readability:
-	 *   * If, for each pass of the loop which "adds" you need to change a value inside
-	 *     a struct inside an array, it may be faster to first load the value into a local
-	 *      variable, increment this variable as needed throughout the loop, and then write it
-	 *     back into the struct inside the array after. For example:
-	 *           int offset = myArray[someIdx].value;
-	 *           for (int i =...; i < ...; i++) {
-	 *               offset ++;
-	 *           }
-	 *           myArray[someIdx].value = offset;
-	 *   * If you need a value in a number of places, try loading it into a local variable
-	 *          int someNum = myArray[someIdx].value;
-	 *          if (someNum < X || someNum > Y || someNum != Z) {
-	 *              someNum = 42;
-	 *          }
-	 *          ... use someNum vs myArray[someIdx].value;
-	 *
+
+	 *      * If you have now played back the entire sample, free the slot in the soundBites[] array.
+	 * 
 	 */
 
+	 pthread_mutex_lock(&audioMutex);
+	 memset(buff, 0, size * sizeof(short));
 
+	 // size is the size of the buffer
+	 // MAX_SOUND_BITES is the size of the soundBites array
+	 for (int j = 0; j < size; j++) {
+   		for (int i = 0; i < MAX_SOUND_BITES; i++) {
+
+			wavedata_t *sound = soundBites[i].pSound;
+ 			if (sound == NULL) continue;
+
+			int nextSample = soundBites[i].location;
+			if (soundBites[i].location >= soundBites[i].pSound->numSamples) {
+				soundBites[i].pSound = NULL;
+				soundBites[i].location = 0;
+				continue;
+			}
+
+			int sum = buff[j] +sound->pData[nextSample];
+
+			// clipping audio:
+			if (sum > SHRT_MAX) {sum = SHRT_MAX;}
+			if (sum < SHRT_MIN) {sum = SHRT_MIN;}
+
+			buff[j] = (short)sum;
+			soundBites[i].location++;
+		}
+	}
+	 pthread_mutex_unlock(&audioMutex);
 
 }
 
