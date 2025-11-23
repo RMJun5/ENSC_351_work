@@ -26,7 +26,7 @@ int main(void) {
     RockBeat rockBeat;
     BeatType type;
     int bpm = 120;
-    int vol = audioMixer_getVolume();
+    int vol = AudioMixer_getVolume();
 
 
     AudioMixer_init();
@@ -48,9 +48,13 @@ int main(void) {
             input_js = joystick();
 
             // For stability, check for consistency between previous and current inputs - stable if the same
-            if ((user_input != STOPPED && user_input == prev_input) || (input_js != IDLE && input_js == prev_js)) {
+            if ((user_input != STOPPED && user_input == prev_input)) {
                 printf("Stable encoder input: %d\n", user_input);
                 user_input = prev_input;
+                break;
+            } else if ((input_js != IDLE && input_js == prev_js)) {
+                printf("Stable joystick input: %d\n", input_js);
+                input_js = prev_js;
                 break;
             }
             prev_js = input_js;
@@ -58,20 +62,35 @@ int main(void) {
             sleep(0.01);
         }
 
-        // while (js_input == JS_UP) {
-        //     vol += 5;
-        // }
-        // while (js_input == JS_DOWN) {
-        //     vol -= 5;
-        // }
+         
+        // ----- Joystick: Change Volume -----
+        Direction js = joystick();
+        if (js != IDLE && js == prev_js) {
+            int vol = AudioMixer_getVolume();
 
-        // handle encoder inputs
+            if (js == JS_UP) {
+                vol += 5;
+            }
+            else if (js == JS_DOWN) {
+                vol -= 5;
+            }
+
+            // Clamp volume 0–100
+            if (vol < 0) vol = 0;
+            if (vol > 100) vol = 100;
+
+            AudioMixer_setVolume(vol);
+            printf("Volume: %d\n", vol);
+        }
+
+
+        //  ----- encoder: change bpm and beat -----
         if (user_input == CW) {
             // increase BPM
             bpm += 5;
         } else if (user_input == CCW) {
             bpm -= 5;
-        } else if (user_input == PRESSED) {
+        } else if (user_input == PRESSED) {     // TODO: get the push button on encoder
             // iterate througjh beat types
             if (type == ROCK) {
                 type = CUSTOM;
