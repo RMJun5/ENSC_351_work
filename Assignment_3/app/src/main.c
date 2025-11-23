@@ -1,6 +1,7 @@
 #include "periodTimer.h"
 #include "audioMixer.h"
 #include <stdio.h>
+#include <unistd.h>
 // #include "beatbox.h"
 
 
@@ -15,10 +16,10 @@ int main(void) {
 
     AudioMixer_queueSound(&beatSound);
 
-    // while (1) {
-    //     // main loop
-
-    // }
+    while (1) {
+        // main loop
+        sleep(1);
+    }
 
 
     AudioMixer_freeWaveFileData(&beatSound);

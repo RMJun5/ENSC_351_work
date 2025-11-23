@@ -173,6 +173,7 @@ void AudioMixer_queueSound(wavedata_t *pSound)
 		}
 	}
 	printf("Error: No free slots for sound\n");
+	pthread_mutex_unlock(&audioMutex);
 	return;
 }
 
@@ -247,35 +248,121 @@ void AudioMixer_setVolume(int newVolume)
 //    size: the number of *values* to store into buff
 static void fillPlaybackBuffer(short *buff, int size)
 {
-	for(short j=0;j<size;j++)
-	{
-		if (j > 900)
-		{
-			buff[j]=0;
-		}
-		else
-		{	if(j%100<50)
-				{buff[j]=(j%50)*100;}
-			else
-				{buff[j]=5000-(j%50)*100;}
-		}
-	}
+	// for(short j=0;j<size;j++)
+	// {
+	// 	if (j > 900)
+	// 	{
+	// 		buff[j]=0;
+	// 	}
+	// 	else
+	// 	{	if(j%100<50)
+	// 			{buff[j]=(j%50)*100;}
+	// 		else
+	// 			{buff[j]=5000-(j%50)*100;}
+	// 	}
+	// }
 	/*
 	 * REVISIT: Implement this
 	 * 1. Wipe the buff to all 0's to clear any previous PCM data.
 	 *    Hint: use memset(); read the docs about its use of size.
+
 	 * 2. Since this is called from a background thread, and soundBites[] array
 	 *    may be used by any other thread, must synchronize this.
+	 *
 	 * 3. Loop through each slot in soundBites[], which are sounds that are either
 	 *    waiting to be played, or partially already played:
 	 *    - If the sound bite slot is unused, do nothing for this slot.
+
 	 *    - Otherwise "add" this sound bite's data to the play-back buffer
 	 *      (other sound bites needing to be played back will also add to the same data).
+
 	 *      * Record that this portion of the sound bite has been played back by incrementing
 	 *        the location inside the data where play-back currently is.
-	 *      * If you have now played back the entire sample, free the slot in the
-	 *        soundBites[] array.
-	 *
+
+	 *      * If you have now played back the entire sample, free the slot in the soundBites[] array.
+	 * 
+	 */
+
+	// // 1. Clear the buffer
+    // memset(buff, 0, size * sizeof(short));
+
+    // // 2. Lock the audioMutex so no other thread changes soundBites while we read it
+    // pthread_mutex_lock(&audioMutex);
+
+    // // 3. Loop over all soundBite slots
+    // for (int i = 0; i < MAX_SOUND_BITES; i++) {
+    //     wavedata_t *sound = soundBites[i].pSound;
+    //     if (!sound) continue;  // Skip empty slots
+
+    //     int samplesRemaining = sound->numSamples - soundBites[i].location;
+    //     int samplesToMix = (samplesRemaining < size) ? samplesRemaining : size;
+
+    //     // Mix the sound into the buffer
+    //     for (int j = 0; j < samplesToMix; j++) {
+    //         int nextSampleIdx = soundBites[i].location + j;
+
+    //         // Add with clipping
+    //         int sum = buff[j] + sound->pData[nextSampleIdx] * 4;
+    //         if (sum > SHRT_MAX) sum = SHRT_MAX;
+    //         if (sum < SHRT_MIN) sum = SHRT_MIN;
+
+    //         buff[j] = (short)sum;
+    //     }
+
+    //     // Update the location for this sound
+    //     soundBites[i].location += samplesToMix;
+
+    //     // If we finished this sound, free the slot
+    //     if (soundBites[i].location >= sound->numSamples) {
+    //         soundBites[i].pSound = NULL;
+    //         soundBites[i].location = 0;
+    //     }
+    // }
+
+    // // 4. Unlock the mutex
+    // pthread_mutex_unlock(&audioMutex);
+
+
+
+	 pthread_mutex_lock(&audioMutex);
+	 memset(buff, 0, size * sizeof(short));
+
+	 // size is the size of the buffer
+	 // MAX_SOUND_BITES is the size of the soundBites array
+	 for (int j = 0; j < size; j++) {
+   		for (int i = 0; i < MAX_SOUND_BITES; i++) {
+
+			wavedata_t *sound = soundBites[i].pSound;
+ 			if (sound == NULL) continue;
+
+			int nextSample = soundBites[i].location;
+			// free the slot once the sample has been played back
+			if (soundBites[i].location >= soundBites[i].pSound->numSamples) {
+				soundBites[i].pSound = NULL;
+				soundBites[i].location = 0;
+				continue;  // skip this sound
+			}
+
+			int sum = buff[j] +sound->pData[nextSample];
+
+
+			// clipping audio:
+			if (sum > SHRT_MAX) {
+				sum = SHRT_MAX;
+			}
+			if (sum < SHRT_MIN) {
+				sum = SHRT_MIN;
+			}
+
+			buff[j] = (short)sum;
+			soundBites[i].location++;
+		}
+	}
+	 pthread_mutex_unlock(&audioMutex);
+
+
+
+	 /*
 	 * Notes on "adding" PCM samples:
 	 * - PCM is stored as signed shorts (between SHRT_MIN and SHRT_MAX).
 	 * - When adding values, ensure there is not an overflow. Any values which would
@@ -300,8 +387,6 @@ static void fillPlaybackBuffer(short *buff, int size)
 	 *          ... use someNum vs myArray[someIdx].value;
 	 *
 	 */
-
-
 
 }
 
