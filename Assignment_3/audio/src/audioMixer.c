@@ -345,3 +345,11 @@ void* playbackThread()
 
 	return NULL;
 }
+
+
+void scaleVolume(wavedata_t *sound, float factor)
+{
+    for (int i = 0; i < sound->numSamples; i++) {
+        sound->pData[i] = (short)(sound->pData[i] * factor);
+    }
+}
