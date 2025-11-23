@@ -14,7 +14,8 @@ typedef enum
 {
   CW,
   CCW,
-  STOPPED
+  STOPPED,
+  PRESSED
 } Rotation;
 
 // Use the rotary encoder to control how fast the LED blinks (using PWM).
