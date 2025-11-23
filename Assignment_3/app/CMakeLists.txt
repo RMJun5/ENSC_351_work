@@ -4,11 +4,12 @@ file(GLOB MY_SOURCES "src/*.c")
 add_executable(beatbox ${MY_SOURCES})
 find_package(ALSA REQUIRED)
 
+
 # Make use of the HAL library
 target_link_libraries(beatbox LINK_PRIVATE hal)
 target_link_libraries(beatbox LINK_PRIVATE asound)
 target_link_libraries(beatbox LINK_PRIVATE audio_lib)
-
+target_link_libraries(beatbox PRIVATE "/usr/lib/aarch64-linux-gnu/libasound.so")
 
 # Copy executable to final location (change `beatbox` to project name as needed)
 add_custom_command(TARGET beatbox POST_BUILD 

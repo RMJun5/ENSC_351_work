@@ -35,6 +35,13 @@ endif()
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GPIOD REQUIRED libgpiod)
 
+# --- ALSA from host (not sysroot) ---
+# Only use ALSA from the host
+set(ALSA_INCLUDE_DIR "/usr/include")
+set(ALSA_LIBRARY "/usr/lib/aarch64-linux-gnu/libasound.so")
+message(STATUS "Forcing ALSA include dir: ${ALSA_INCLUDE_DIR}")
+message(STATUS "Forcing ALSA library: ${ALSA_LIBRARY}")
+
 # Enable address sanitizer
 # # (Comment this out to make your code faster)
 # add_compile_options(-fsanitize=address)

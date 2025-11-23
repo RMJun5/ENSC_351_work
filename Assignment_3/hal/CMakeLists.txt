@@ -34,6 +34,7 @@ target_link_libraries(hal
 )
 
 # --- Diagnostics ---
-message(STATUS "Using libgpiod version: ${LIBGPIOD_VERSION}")
 message(STATUS "libgpiod include dirs: ${LIBGPIOD_INCLUDE_DIRS}")
+message(STATUS "Using libgpiod version: ${LIBGPIOD_VERSION}")
 message(STATUS "libgpiod libraries: ${LIBGPIOD_LIBRARIES}")
+
