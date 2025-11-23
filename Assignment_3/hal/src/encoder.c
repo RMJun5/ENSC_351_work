@@ -88,7 +88,7 @@ void encoder_init() {
     return;
 
     error:
-        clean_encoder(); // cleans only whatâs been allocated so far
+        clean_encoder(); // cleans only whats been allocated so far
         return;
 }
 
@@ -102,7 +102,7 @@ Rotation read_encoder() {
         printf("Failed to read encoder lines: %s\n", strerror(errno));
         return -1;
     }
-    printf("A=%d, B=%d\n", values[0], values[1]);
+    //printf("A=%d, B=%d\n", values[0], values[1]);
 
     // Pack A/B into a single number (bitwise)
     // (values[0] << 1) | values[1];
