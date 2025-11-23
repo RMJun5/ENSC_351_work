@@ -1,4 +1,4 @@
-# CMPT 433 Sample Assignment Build Structure
+# ENSC 351 Assignment Build Structure
 
 This is a working project that you can use as the basis for your assignments.
 
@@ -89,3 +89,6 @@ To manually run CMake from the command line use:
   This extra "hal/..." helps distinguish the low-level access from the higher-level code.
 - One only need to run the CMake build the first time the project loads, and each time the .h and .c file names change, or new ones are added, or ones are removed. This regenerates the `build/Makefile`. Otherwise, just run a normal build (ctrl+shift+B)
 - If desired, one could provide an alternative implementation for the HAL modules that provides a software simulation of the hardware! This could be a useful idea if you have some complex hardware, or limited access to some hardware.
+
+## ADC pins
+- Accelerometer: X-axis = CH2, Y-axis = CH3, Z-Axis = CH5,
