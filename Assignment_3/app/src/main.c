@@ -1,17 +1,110 @@
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+// #include <json-c/json_object.h>
 #include <unistd.h>
-
 #include "periodTimer.h"
 #include "audioMixer.h"
 #include "beatbox.h"
 #include "hal/encoder.h"
+#include <pthread.h>
 #include "hal/joystick.h"
+// #include "hal/accelerometer.h"
+
+#include <arpa/inet.h>
+
+#define PORT 12345
+#define BUF_SIZE 1024
+BeatBox beatbox;
+int bpm = 100;
+int vol = 0;
 
 
-// read json file:
-// #include <json-c/json.h>
-// #include "beatbox.h"
+// ACTION CALLBACKS FOR ENCODER AND JOYSTICK
+
+void encoderAction(Rotation input, int *bpm, BeatBox *beatbox) {
+    if (input == CW) *bpm += 5;
+    else if (input == CCW) *bpm -= 5;
+    else if (input == PRESSED) {
+        if (beatbox->type == ROCK) beatbox->type = CUSTOM;
+        else if (beatbox->type == CUSTOM) beatbox->type = ROCK;
+        else if (beatbox->type == NONE) beatbox->type = ROCK;
+
+        printf("Switched beat type to %d\n", beatbox->type);
+    }
+}
+
+
+void joystickAction(Direction input, Direction prev_js, int *vol) {
+    int v = AudioMixer_getVolume();
+    if (input != IDLE && input == prev_js) {
+        if (input == JS_UP) v += 5;
+        else if (input == JS_DOWN) v -= 5;
+        if (v < 0) v = 0;
+        if (v > 100) v = 100;
+        AudioMixer_setVolume(v);
+        *vol = v;
+        printf("Volume: %d\n", v);
+    }
+}
+
+
+
+
+// THREADS:
+
+
+
+void* drum_thread(void* arg) {
+    while (1) {
+        switch (beatbox.type) {
+            case ROCK:
+                BeatBox_playRock(&beatbox, bpm);
+                break;
+            case CUSTOM:
+                // Your custom beat handling
+                break;
+            case NONE:
+                // Silence or do nothing
+                break;
+        }
+        usleep(1000); // small sleep to avoid CPU hogging
+    }
+    return NULL;
+}
+
+
+void* encoder_thread(void* arg) {
+    Rotation prev_input = STOPPED;
+    Rotation user_input;
+    while (1) {
+        user_input = read_encoder();
+        if (user_input != STOPPED && user_input != prev_input) {
+            encoderAction(user_input, &bpm, &beatbox);
+        }
+        prev_input = user_input;
+        usleep(10000);
+    }
+    return NULL;
+}
+
+
+void* joystick_thread(void* arg) {
+    Direction prev_js = IDLE;
+    Direction input_js;
+    while (1) {
+        input_js = joystick();
+        if (input_js != IDLE && input_js != prev_js) {
+            joystickAction(input_js, prev_js, &vol);
+        }
+        prev_js = input_js;
+        usleep(10000);
+    }
+    return NULL;
+}
+
+
 
 
 int main(void) {
@@ -23,106 +116,75 @@ int main(void) {
     Direction input_js;
     Direction prev_js = IDLE;    
 
-    RockBeat rockBeat;
-    BeatType type;
-    int bpm = 120;
-    int vol = AudioMixer_getVolume();
+    // Beatbox
+    beatbox.type = ROCK;
 
+    // Network
+    unsigned long lastPrint = time(NULL);
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    struct sockaddr_in hostAddr;
+    hostAddr.sin_family = AF_INET;
+    hostAddr.sin_port = htons(12345);
+    hostAddr.sin_addr.s_addr = inet_addr("192.168.7.1");
 
+    // Initialize hardware and period timer
     AudioMixer_init();
+    BeatBox_init(&beatbox);
     encoder_init();
+    Period_init();
+        
+    pthread_t drum, enc, js;
+    pthread_create(&drum, NULL, drum_thread, NULL);
+    pthread_create(&enc, NULL, encoder_thread, NULL);
+    pthread_create(&js, NULL, joystick_thread, NULL);
 
-    
-    type = BeatBox_init(1, &rockBeat);
+    pthread_join(drum, NULL);
+    pthread_join(enc, NULL);
+    pthread_join(js, NULL);
+        
 
-    // main loop
-    while (1) {
-       // BeatType type = BeatBox.init("ROCK");  // get beattype from user input in node js server: json request
-       // open json files data:
+        // Period_markEvent(PERIOD_EVENT_SAMPLE_AUDIO);
+        // Period_markEvent(PERIOD_EVENT_SAMPLE_ACCEL);
 
-        // user_input = read_encoder();
+        // /*
+        // Time between refilling audio playback buffer
+        //     Each time your code finishes filling the playback buffer, mark the interval/event.
+        //     Format: Audio[{min}, {max}] avg {avg}/{num-samples}
+        // Time between samples of the accelerometer
+        //     Each time your code reads the accelerometer, mark an interval/event.
+        //     Format: Accel[{min}, {max}] avg {avg}/{num-samples}
+        // */
+        // unsigned long now = time(NULL);
+        //     if (now != lastPrint) {       // 1Hz
+        //         lastPrint = now;
 
-        //Get the user input
-        while (1) {
-            user_input = read_encoder();
-            input_js = joystick();
+        //         Period_statistics_t statsAudio, statsAccel;
+        //         Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_AUDIO, &statsAudio);
+        //         Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_ACCEL, &statsAccel);
 
-            // For stability, check for consistency between previous and current inputs - stable if the same
-            if ((user_input != STOPPED && user_input == prev_input)) {
-                printf("Stable encoder input: %d\n", user_input);
-                user_input = prev_input;
-                break;
-            } else if ((input_js != IDLE && input_js == prev_js)) {
-                printf("Stable joystick input: %d\n", input_js);
-                input_js = prev_js;
-                break;
-            }
-            prev_js = input_js;
-            prev_input = user_input;
-            sleep(0.01);
-        }
+        //         char buffer[256];
+        //         snprintf(buffer, sizeof(buffer),
+        //                 "Audio[%.2f, %.2f], avg: %.2f; Accel[%.2f, %.2f], avg: %.2f",
+        //                 statsAudio.minPeriodInMs,
+        //                 statsAudio.maxPeriodInMs,
+        //                 statsAudio.avgPeriodInMs,
+        //                 statsAccel.minPeriodInMs,
+        //                 statsAccel.maxPeriodInMs,
+        //                 statsAccel.avgPeriodInMs);
 
-         
-        // ----- Joystick: Change Volume -----
-        Direction js = joystick();
-        if (js != IDLE && js == prev_js) {
-            int vol = AudioMixer_getVolume();
+        //         sendto(sock, buffer, strlen(buffer), 0, (struct sockaddr *)&hostAddr, sizeof(hostAddr));
+        //         //printf("Sent stats: %s\n", buffer);
+        //     }
 
-            if (js == JS_UP) {
-                vol += 5;
-            }
-            else if (js == JS_DOWN) {
-                vol -= 5;
-            }
-
-            // Clamp volume 0–100
-            if (vol < 0) vol = 0;
-            if (vol > 100) vol = 100;
-
-            AudioMixer_setVolume(vol);
-            printf("Volume: %d\n", vol);
-        }
+        //     // small delay to control loop speed
+        //    // usleep(10000);  // 10 ms loop
+    //}
 
 
-        //  ----- encoder: change bpm and beat -----
-        if (user_input == CW) {
-            // increase BPM
-            bpm += 5;
-        } else if (user_input == CCW) {
-            bpm -= 5;
-        } else if (user_input == PRESSED) {     // TODO: get the push button on encoder
-            // iterate througjh beat types
-            if (type == ROCK) {
-                type = CUSTOM;
-            } else if (type == CUSTOM) {
-                type = ROCK;
-            }
-        }
-
-        switch(type) {
-            case ROCK:
-                BeatBox_play(&rockBeat, bpm);
-                break;
-            case CUSTOM:
-                BeatBox_custom();
-                break;
-            case NONE:
-                break;
-            default:
-                break;
-        }
-
-        //usleep(500); // small delay to prevent CPU spin
-    }
-
-
-    AudioMixer_freeWaveFileData(&rockBeat.snare);
-    AudioMixer_freeWaveFileData(&rockBeat.kick);
-    AudioMixer_freeWaveFileData(&rockBeat.hihat);
+    BeatBox_cleanup(&beatbox);
     AudioMixer_cleanup();
     clean_encoder();
     // BeatBoxCleanup();
 
     return 0;
 }
-

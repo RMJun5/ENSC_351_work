@@ -6,6 +6,10 @@
 #include <linux/spi/spidev.h>
 #include <sys/ioctl.h>
 #include <stdint.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+
 
 static bool accInitialized = false;
 static int channelX = 2; // X-axis channel
@@ -55,7 +59,8 @@ int16_t accelerometer_read_x(void) {
         printf("Error: Accelerometer not initialized.\n");
         return 0;
     }
-    read_adc_ch(open(dev, O_RDWR), channelX, speed);
+    int fd = open(dev, O_RDWR);
+    read_adc_ch(fd, channelX, speed);
     
     
 }

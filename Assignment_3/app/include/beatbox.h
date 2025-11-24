@@ -10,28 +10,6 @@
 #include "audioMixer.h"
 #include <unistd.h>
 
-
-typedef struct 
-{
-  wavedata_t kick;
-  wavedata_t snare;
-  wavedata_t hihat;
-} RockBeat;
-
-typedef struct {
-  wavedata_t *sounds;  // dynamically allocated array of sounds
-  int numSounds;       // number of sounds in the beat
-} CustomBeat;
-
-
-
-// // Unused atm
-// typedef struct {
-//   RockBeat *rockBeats;
-//   CustomBeat *customBeats;
-// } BeatBox;
-
-
 typedef enum 
 {   
   NONE,
@@ -40,9 +18,38 @@ typedef enum
 } BeatType;
 
 
-BeatType BeatBox_init(int beat, RockBeat *data);
-void BeatBox_play(RockBeat *beat, int bpm);
-void BeatBox_custom();
+typedef struct {
+    wavedata_t kick;
+    wavedata_t snare;
+    wavedata_t hihat;
+} RockBeat;
 
+typedef struct {
+    wavedata_t *sounds;  // dynamically allocated array of sounds
+    int numSounds;       // number of sounds in the beat
+} CustomBeat;
+
+typedef struct {
+    int none;
+} NoBeat;
+
+
+// unified BeatBox struct
+typedef struct 
+{
+  BeatType type;
+  union 
+  {
+    RockBeat rock;
+    CustomBeat custom;
+    NoBeat noBeat;
+  } data;
+} BeatBox;
+
+
+void BeatBox_init(BeatBox *beatBox);
+void BeatBox_playRock(BeatBox *beatBox, int bpm);
+void BeatBox_playCustom(BeatBox *beatBox, int bpm);
+void BeatBox_cleanup(BeatBox *beatBox);
 
 #endif

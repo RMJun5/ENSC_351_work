@@ -7,8 +7,8 @@
 
 #include <time.h>   // for clock_gettime, CLOCK_MONOTONIC
 #include <stdint.h> // for uint64_t if you want large microsecond
-// GPIO 27 (A) and 22 (B)
-unsigned int LINE_OFFSET[] = {33, 41};
+// GPIO 27 (A) 22 (B) and 4 (SELECT)
+unsigned int LINE_OFFSET[] = {33, 41, 38};
 int num;
 
 struct gpiod_chip *chip;
@@ -65,7 +65,7 @@ void encoder_init() {
         printf("%s", "Cannot get line config");
         goto error;
     }
-    gpiod_line_config_add_line_settings(config, LINE_OFFSET, 2, settings);
+    gpiod_line_config_add_line_settings(config, LINE_OFFSET, 3, settings);
 
 
     // 4. Create request config
@@ -84,7 +84,7 @@ void encoder_init() {
         goto error;
     }
 
-    printf("Encoder initialized on GPIOs %u and %u\n", LINE_OFFSET[0], LINE_OFFSET[1]);
+    printf("Encoder initialized on GPIOs line offsets %u, %u, %u\n", LINE_OFFSET[0], LINE_OFFSET[1], LINE_OFFSET[2]);
     return;
 
     error:
@@ -95,26 +95,30 @@ void encoder_init() {
 Rotation read_encoder() {
     if (!request) return -1;
 
-    int values[2];
+    int values[3];
 
     int ret = gpiod_line_request_get_values(request, values);
     if (ret < 0) {
         printf("Failed to read encoder lines: %s\n", strerror(errno));
         return -1;
     }
-    //printf("A=%d, B=%d\n", values[0], values[1]);
+    printf("A=%d, B=%d, SELECT=%d\n", values[0], values[1], values[2]);
 
     // Pack A/B into a single number (bitwise)
     // (values[0] << 1) | values[1];
     // instead, return a direction enum:
 
-    if (values[0] && !values[1]) {
+    if (values[0] && !values[1] && values[2]) {
         printf("%s","CW\n");
         return CW;
     }
-    else if (!values[0] && values[1]) {
+    else if (!values[0] && values[1] && values[2]) {
         printf("%s","CCW\n");
         return CCW;
+    }
+    else if (values[0] && values[1] && !values[2]) {
+        printf("%s","PRESSED\n");
+        return PRESSED;
     }
     
     return STOPPED;
