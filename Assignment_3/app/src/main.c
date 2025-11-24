@@ -55,7 +55,6 @@ void encoderAction(Rotation input, BeatBox *beatbox) {
     pthread_mutex_unlock(&lock);
 }
 
-
 void joystickAction(Direction input, Direction *prev_js) {
     pthread_mutex_lock(&lock);
 
@@ -63,8 +62,6 @@ void joystickAction(Direction input, Direction *prev_js) {
     if (input != *prev_js) {
         if (input == JS_DOWN)  g_volume -= 5;
         if (input == JS_UP) g_volume += 5;
-
-
 
         AudioMixer_setVolume(g_volume);
         *prev_js = input;
@@ -100,7 +97,7 @@ static void play_axis_sound(Axis axis) {
     }
 }
 
-// helper: get current time in milliseconds
+// helpers
 static uint64_t now_ms(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -273,20 +270,23 @@ void* udp_receive_thread(void* arg) {
     addr.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        perror("udp bind"); close(sock); return NULL;
+        perror("udp bind"); 
+        close(sock); 
+        return NULL;
     }
 
     printf("UDP receiver: listening on port %d\n", PORT);
 
     char buffer[256];
     struct sockaddr_in client;
-    socklen_t clientLen = sizeof(client);
-
-    while (1) {
-        socklen_t clientLen = sizeof(client);  // reset each call
+        while (1) {
+        socklen_t clientLen = sizeof(client);
         ssize_t len = recvfrom(sock, buffer, sizeof(buffer)-1, 0,
-                            (struct sockaddr*)&client, &clientLen);
-        if (len < 0) { perror("udp recv error"); continue; }
+                               (struct sockaddr*)&client, &clientLen);
+        if (len < 0) { 
+            perror("udp recv error"); 
+            continue; 
+        }
 
         buffer[len] = '\0';
         printf("UDP received: '%s'\n", buffer);
@@ -294,9 +294,10 @@ void* udp_receive_thread(void* arg) {
         char reply[128];
         reply[0] = '\0';
 
-        // Remove leading spaces
         char* cmd = buffer;
         while (*cmd && isspace((unsigned char)*cmd)) cmd++;
+
+        pthread_mutex_lock(&lock);
 
         if (strncmp(cmd, "status", 6) == 0) {
             snprintf(reply, sizeof(reply), "M%d %dbpm vol:%d", g_mode, g_bpm, g_volume);
@@ -308,32 +309,26 @@ void* udp_receive_thread(void* arg) {
                 if (v > 100) v = 100;
                 g_volume = v; 
                 AudioMixer_setVolume(g_volume);
-                snprintf(reply, sizeof(reply), "%d", g_volume);   
-            } 
-            else if (strstr(cmd + 6, "null") != NULL) {
-                snprintf(reply, sizeof(reply), "%d", g_volume);
             }
+            snprintf(reply, sizeof(reply), "%d", g_volume);
         }
         else if (strncmp(cmd, "tempo", 5) == 0) {
             int t;
             if (parse_int_safe(cmd + 5, &t)) { 
                 g_bpm = t; 
-                snprintf(reply, sizeof(reply), "%d", g_bpm);
             }
-            else if (strstr(cmd + 5, "null") != NULL) {
-                snprintf(reply, sizeof(reply), "%d", g_bpm);
-            }
+            snprintf(reply, sizeof(reply), "%d", g_bpm);
         }
         else if (strncmp(cmd, "snare", 5) == 0) {
-            BeatBox_playSample(&beatbox, 1);   // SNARE sample index
+            AudioMixer_queueSound(&beatbox.data.rock.snare);
             snprintf(reply, sizeof(reply), "snare");
         }
         else if (strncmp(cmd, "kick", 4) == 0) {
-            BeatBox_playSample(&beatbox, 0);   // KICK sample index
+            AudioMixer_queueSound(&beatbox.data.rock.kick);
             snprintf(reply, sizeof(reply), "kick");
         }
         else if (strncmp(cmd, "hihat", 5) == 0) {
-            BeatBox_playSample(&beatbox, 2);   // HIHAT sample index
+            AudioMixer_queueSound(&beatbox.data.rock.hihat);
             snprintf(reply, sizeof(reply), "hihat");
         }
         else if (strncmp(cmd, "mode", 4) == 0) {
@@ -341,18 +336,126 @@ void* udp_receive_thread(void* arg) {
             if (parse_int_safe(cmd + 4, &m)) {
                 g_mode = m;
                 beatbox.type = g_mode;
-                snprintf(reply, sizeof(reply), "%d", g_mode);
             }
-            else if (strstr(cmd + 4, "null") != NULL) {
-                snprintf(reply, sizeof(reply), "%d", g_mode);
+            snprintf(reply, sizeof(reply), "%d", g_mode);
+        } else if (strncmp(cmd, "play", 4) == 0) {
+            if (cmd[4] == '0') {
+                pthread_mutex_lock(&lock);
+                BeatBox_playSample(&beatbox, 0); // kick
+                pthread_mutex_unlock(&lock);
+                snprintf(reply, sizeof(reply), "kick");
+            } 
+            else if (cmd[4] == '1') {
+                pthread_mutex_lock(&lock);
+                BeatBox_playSample(&beatbox, 2); // hi-hat
+                pthread_mutex_unlock(&lock);
+                snprintf(reply, sizeof(reply), "hihat");
+            } 
+            else if (cmd[4] == '2') {
+                pthread_mutex_lock(&lock);
+                BeatBox_playSample(&beatbox, 1); // snare
+                pthread_mutex_unlock(&lock);
+                snprintf(reply, sizeof(reply), "snare");
+            } 
+            else {
+                snprintf(reply, sizeof(reply), "ERROR: unknown play command");
             }
+        }
+        else {
+            snprintf(reply, sizeof(reply), "ERROR: unknown command");
         }
 
-        if (reply[0] != '\0') {
-            sendto(sock, reply, strlen(reply), 0, (struct sockaddr*)&client, clientLen);
-            printf("Sent reply: '%s'\n", reply);
-        }
+        pthread_mutex_unlock(&lock);
+
+        // always send a reply
+        sendto(sock, reply, strlen(reply), 0, (struct sockaddr*)&client, clientLen);
+        printf("UDP sent reply: '%s'\n", reply);
     }
+
+    // while (1) {
+    //     socklen_t clientLen = sizeof(client);  // reset each call
+    //     ssize_t len = recvfrom(sock, buffer, sizeof(buffer)-1, 0,
+    //                            (struct sockaddr*)&client, &clientLen);
+    //     if (len < 0) { 
+    //         perror("udp recv error"); 
+    //         continue; 
+    //     }
+
+    //     buffer[len] = '\0';
+    //     printf("UDP received: '%s'\n", buffer);
+
+    //     char reply[128];
+    //     reply[0] = '\0';
+
+    //     // Remove leading spaces
+    //     char* cmd = buffer;
+    //     while (*cmd && isspace((unsigned char)*cmd)) cmd++;
+
+    //     pthread_mutex_lock(&lock); // LOCK START
+
+    //     if (strncmp(cmd, "status", 6) == 0) {
+    //         snprintf(reply, sizeof(reply), "M%d %dbpm vol:%d", g_mode, g_bpm, g_volume);
+    //     }
+    //     else if (strncmp(cmd, "volume", 6) == 0) {
+    //         int v;
+    //         if (parse_int_safe(cmd + 6, &v)) { 
+    //             if (v < 0) v = 0;
+    //             if (v > 100) v = 100;
+    //             g_volume = v; 
+    //             AudioMixer_setVolume(g_volume);
+    //             snprintf(reply, sizeof(reply), "%d", g_volume);   
+    //         } 
+    //         else if (strstr(cmd + 6, "null") != NULL) {
+    //             snprintf(reply, sizeof(reply), "%d", g_volume);
+    //         }
+    //     }
+    //     else if (strncmp(cmd, "tempo", 5) == 0) {
+    //         int t;
+    //         if (parse_int_safe(cmd + 5, &t)) { 
+    //             g_bpm = t; 
+    //             snprintf(reply, sizeof(reply), "%d", g_bpm);
+    //         }
+    //         else if (strstr(cmd + 5, "null") != NULL) {
+    //             snprintf(reply, sizeof(reply), "%d", g_bpm);
+    //         }
+    //     }
+    //     else if (strncmp(cmd, "snare", 5) == 0) {
+    //         pthread_mutex_lock(&lock);
+    //         BeatBox_playSample(&beatbox, 1);   // SNARE sample index
+    //         pthread_mutex_unlock(&lock);
+    //         snprintf(reply, sizeof(reply), "snare");
+    //     }
+    //     else if (strncmp(cmd, "kick", 4) == 0) {
+    //         pthread_mutex_lock(&lock);
+    //         BeatBox_playSample(&beatbox, 0);   // KICK sample index
+    //         pthread_mutex_unlock(&lock);
+    //         snprintf(reply, sizeof(reply), "kick");
+    //     }
+    //     else if (strncmp(cmd, "hihat", 5) == 0) {
+    //         pthread_mutex_lock(&lock);
+    //         BeatBox_playSample(&beatbox, 2);   // HIHAT sample index
+    //         pthread_mutex_unlock(&lock);
+    //         snprintf(reply, sizeof(reply), "hihat");
+    //     }
+    //     else if (strncmp(cmd, "mode", 4) == 0) {
+    //         int m;
+    //         if (parse_int_safe(cmd + 4, &m)) {
+    //             g_mode = m;
+    //             beatbox.type = g_mode;
+    //             snprintf(reply, sizeof(reply), "%d", g_mode);
+    //         }
+    //         else if (strstr(cmd + 4, "null") != NULL) {
+    //             snprintf(reply, sizeof(reply), "%d", g_mode);
+    //         }
+    //     }
+
+    //     pthread_mutex_unlock(&lock); // LOCK END
+
+    //     if (reply[0] != '\0') {
+    //         sendto(sock, reply, strlen(reply), 0, (struct sockaddr*)&client, clientLen);
+    //         printf("Sent reply: '%s'\n", reply);
+    //     }
+    // }
     close(sock);
     return NULL;
 }
@@ -441,14 +544,13 @@ int main(void) {
     encoder_init();
     accelerometer_init();
 
-    pthread_t drum, enc, js, ac;
-    pthread_t udp, udp_rec;
-    pthread_create(&udp, NULL, udp_thread, NULL);
-    pthread_create(&udp_rec, NULL, udp_receive_thread, NULL);
-    pthread_create(&drum, NULL, drum_thread, NULL);
+    pthread_t drum, enc, js, ac, udp, udp_rec;
     pthread_create(&ac, NULL, accel_thread, NULL);
     pthread_create(&enc, NULL, encoder_thread, NULL);
     pthread_create(&js, NULL, joystick_thread, NULL);
+    pthread_create(&udp_rec, NULL, udp_receive_thread, NULL);
+    pthread_create(&udp, NULL, udp_thread, NULL);
+    pthread_create(&drum, NULL, drum_thread, NULL);
 
     pthread_join(udp, NULL);
     pthread_join(udp_rec, NULL);
@@ -456,40 +558,10 @@ int main(void) {
     pthread_join(enc, NULL);
     pthread_join(js, NULL);
     pthread_join(ac, NULL);
-        
-
-        // Period_markEvent(PERIOD_EVENT_SAMPLE_AUDIO);
-        // Period_markEvent(PERIOD_EVENT_SAMPLE_ACCEL);
-
-        /*
-        Time between refilling audio playback buffer
-            Each time your code finishes filling the playback buffer, mark the interval/event.
-            Format: Audio[{min}, {max}] avg {avg}/{num-samples}
-        Time between samples of the accelerometer
-            Each time your code reads the accelerometer, mark an interval/event.
-            Format: Accel[{min}, {max}] avg {avg}/{num-samples}
-        */
-        // unsigned long now = time(NULL);
-        //     if (now != lastPrint) {       // 1Hz
-        //         lastPrint = now;
-
-        //         Period_statistics_t statsAudio, statsAccel;
-        //         Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_AUDIO, &statsAudio);
-        //         Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_ACCEL, &statsAccel);
-
-
-        //         //printf("Sent stats: %s\n", buffer);
-        //     }
-
-        //     // small delay to control loop speed
-        //    // usleep(10000);  // 10 ms loop
-    
-
 
     BeatBox_cleanup(&beatbox);
     AudioMixer_cleanup();
     clean_encoder();
-    // BeatBoxCleanup();
 
     return 0;
 }

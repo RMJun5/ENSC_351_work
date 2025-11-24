@@ -36,8 +36,14 @@ function handleCommand(socket) {
 		relayToLocalPort(socket, "tempo " + tempoNumber, "tempo-reply");
 	});
 	socket.on('play', function(songNumber) {
+		var command;
+		if (songNumber === '0') command = 'kick';
+		else if (songNumber === '1') command = 'hihat';
+		else if (songNumber === '2') command = 'snare';
+		else return;
+
 		console.log("Got play command: " + songNumber);
-		relayToLocalPort(socket, "play " + songNumber, "play-reply");
+		relayToLocalPort(socket, command, "play-reply");
 	});
 	socket.on('stop', function(notUsed) {
 		console.log("Got stop command: ");
