@@ -102,7 +102,7 @@ Rotation read_encoder() {
         printf("Failed to read encoder lines: %s\n", strerror(errno));
         return -1;
     }
-    printf("A=%d, B=%d, SELECT=%d\n", values[0], values[1], values[2]);
+    //printf("A=%d, B=%d, SELECT=%d\n", values[0], values[1], values[2]);
 
     // Pack A/B into a single number (bitwise)
     // (values[0] << 1) | values[1];

@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-// #include <json-c/json_object.h>
 #include <unistd.h>
 #include "periodTimer.h"
 #include "audioMixer.h"
@@ -16,6 +15,8 @@
 
 #define PORT 12345
 #define BUF_SIZE 1024
+
+
 BeatBox beatbox;
 int bpm = 100;
 int vol = 0;
@@ -36,25 +37,32 @@ void encoderAction(Rotation input, int *bpm, BeatBox *beatbox) {
 }
 
 
-void joystickAction(Direction input, Direction prev_js, int *vol) {
-    int v = AudioMixer_getVolume();
-    if (input != IDLE && input == prev_js) {
-        if (input == JS_UP) v += 5;
-        else if (input == JS_DOWN) v -= 5;
-        if (v < 0) v = 0;
-        if (v > 100) v = 100;
-        AudioMixer_setVolume(v);
-        *vol = v;
-        printf("Volume: %d\n", v);
-    }
+void joystickAction(Direction input, int *vol) {
+    // int v = AudioMixer_getVolume();
+    // if (input != IDLE && input == prev_js) {
+    //     if (input == JS_UP) v += 5;
+    //     else if (input == JS_DOWN) v -= 5;
+    //     if (v < 0) v = 0;
+    //     if (v > 100) v = 100;
+    //     AudioMixer_setVolume(v);
+    //     *vol = v;
+    //     printf("Volume: %d\n", v);
+    // }
+    if (input == JS_UP) *vol += 5;
+    else if (input == JS_DOWN) *vol -= 5;
+
+    // Clamp volume
+    if (*vol < 0) *vol = 0;
+    if (*vol > 100) *vol = 100;
+
+    AudioMixer_setVolume(*vol);
+    printf("Volume: %d\n", *vol);
 }
 
 
 
 
 // THREADS:
-
-
 
 void* drum_thread(void* arg) {
     while (1) {
@@ -63,17 +71,14 @@ void* drum_thread(void* arg) {
                 BeatBox_playRock(&beatbox, bpm);
                 break;
             case CUSTOM:
-                // Your custom beat handling
                 break;
             case NONE:
-                // Silence or do nothing
                 break;
         }
-        usleep(1000); // small sleep to avoid CPU hogging
+        usleep(1000);
     }
     return NULL;
 }
-
 
 void* encoder_thread(void* arg) {
     Rotation prev_input = STOPPED;
@@ -89,14 +94,13 @@ void* encoder_thread(void* arg) {
     return NULL;
 }
 
-
 void* joystick_thread(void* arg) {
     Direction prev_js = IDLE;
     Direction input_js;
     while (1) {
         input_js = joystick();
-        if (input_js != IDLE && input_js != prev_js) {
-            joystickAction(input_js, prev_js, &vol);
+        if (input_js != IDLE) {  // act whenever joystick is moved
+            joystickAction(input_js, &vol);
         }
         prev_js = input_js;
         usleep(10000);
@@ -143,8 +147,8 @@ int main(void) {
     pthread_join(js, NULL);
         
 
-        // Period_markEvent(PERIOD_EVENT_SAMPLE_AUDIO);
-        // Period_markEvent(PERIOD_EVENT_SAMPLE_ACCEL);
+        Period_markEvent(PERIOD_EVENT_SAMPLE_AUDIO);
+        Period_markEvent(PERIOD_EVENT_SAMPLE_ACCEL);
 
         // /*
         // Time between refilling audio playback buffer
@@ -178,7 +182,7 @@ int main(void) {
 
         //     // small delay to control loop speed
         //    // usleep(10000);  // 10 ms loop
-    //}
+    
 
 
     BeatBox_cleanup(&beatbox);
