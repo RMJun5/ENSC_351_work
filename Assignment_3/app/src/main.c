@@ -442,6 +442,7 @@ int main(void) {
     pthread_create(&ac, NULL, accel_thread, NULL);
     pthread_create(&enc, NULL, encoder_thread, NULL);
     pthread_create(&js, NULL, joystick_thread, NULL);
+    pthread_create(&acc, NULL, accelerSoundThread, NULL);
 
     pthread_join(udp, NULL);
     pthread_join(udp_rec, NULL);
@@ -482,6 +483,7 @@ int main(void) {
     BeatBox_cleanup(&beatbox);
     AudioMixer_cleanup();
     clean_encoder();
+    accelerometer_cleanup();
     // BeatBoxCleanup();
 
     return 0;
