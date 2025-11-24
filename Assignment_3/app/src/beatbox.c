@@ -35,11 +35,28 @@ void BeatBox_playRock(BeatBox *beatbox, int bpm) {
 }
 
 void BeatBox_playCustom(BeatBox *beatbox, int bpm) {
-    // for (int i = 0; i < beatbox->data.custom.numSounds; i++) {
-            //     AudioMixer_queueSound(&beatbox->data.custom.sounds[i]);
-            //     usleep(step_us);
-            // }
-            // break;
+     
+        int step_us = (60 * 1000000) / (bpm * 8);    // 4 steps (16th notes) per beat
+
+        AudioMixer_queueSound(&beatbox->data.rock.kick);
+        AudioMixer_queueSound(&beatbox->data.rock.hihat);
+        usleep(step_us);
+
+        AudioMixer_queueSound(&beatbox->data.rock.hihat);
+        usleep(step_us);
+
+        AudioMixer_queueSound(&beatbox->data.rock.hihat);
+        usleep(step_us);
+
+        AudioMixer_queueSound(&beatbox->data.rock.snare);
+        AudioMixer_queueSound(&beatbox->data.rock.hihat);
+        usleep(step_us);
+
+        AudioMixer_queueSound(&beatbox->data.rock.hihat);
+        usleep(step_us);
+
+        AudioMixer_queueSound(&beatbox->data.rock.hihat);
+        usleep(step_us);
 }
 
 // BeatType BeatBox_init(int beat, BeatBox *beatbox) {
@@ -75,22 +92,28 @@ void BeatBox_init(BeatBox *beatbox) {
     AudioMixer_readWaveFileIntoMemory("/mnt/remote/myApps/wave-files/100053__menegass__gui-drum-cc.wav", &beatbox->data.rock.hihat);
     scaleVolume(&beatbox->data.rock.hihat, 0.3);
 
-    const char *customPaths[5] = {
-        "/mnt/remote/myApps/wave-files/100051__menegass__gui-drum-bd-hard.wav",
-        "/mnt/remote/myApps/wave-files/100059__menegass__gui-drum-snare-soft.wav",
-        "/mnt/remote/myApps/wave-files/100053__menegass__gui-drum-cc.wav",
-        "/mnt/remote/myApps/wave-files/100055__menegass__gui-drum-co.wav",
-        "/mnt/remote/myApps/wave-files/100060__menegass__gui-drum-splash-hard.wav"
-    };
+    AudioMixer_readWaveFileIntoMemory("/mnt/remote/myApps/wave-files/100051__menegass__gui-drum-bd-hard.wav", &beatbox->data.custom.kick);
+    AudioMixer_readWaveFileIntoMemory("/mnt/remote/myApps/wave-files/100059__menegass__gui-drum-snare-soft.wav", &beatbox->data.custom.snare);
+    AudioMixer_readWaveFileIntoMemory("/mnt/remote/myApps/wave-files/100053__menegass__gui-drum-cc.wav", &beatbox->data.custom.hihat);
+    scaleVolume(&beatbox->data.rock.hihat, 0.3);
 
-    char path[256];
-    for (int i = 0; i < beatbox->data.custom.numSounds; i++) {
-        snprintf(path, sizeof(path), "%s", customPaths[i]);
-        AudioMixer_readWaveFileIntoMemory(path, &beatbox->data.custom.sounds[i]);
-    }
+    // const char *customPaths[5] = {
+    //     "/mnt/remote/myApps/wave-files/100051__menegass__gui-drum-bd-hard.wav",
+    //     "/mnt/remote/myApps/wave-files/100059__menegass__gui-drum-snare-soft.wav",
+    //     "/mnt/remote/myApps/wave-files/100053__menegass__gui-drum-cc.wav",
+    //     "/mnt/remote/myApps/wave-files/100055__menegass__gui-drum-co.wav",
+    //     "/mnt/remote/myApps/wave-files/100060__menegass__gui-drum-splash-hard.wav"
+    // };
 
-    // Default type
-    beatbox->type = ROCK;
+    // char path[256];
+    // for (int i = 0; i < beatbox->data.custom.numSounds; i++) {
+    //     snprintf(path, sizeof(path), "%s", customPaths[i]);
+    //     AudioMixer_readWaveFileIntoMemory(path, &beatbox->data.custom.sounds[i]);
+    // }
+    // printf("num sounds: %d\n", beatbox->data.custom.numSounds);
+    // // Default type
+    
+    beatbox->type = NONE;
 }
 
 void BeatBox_cleanup(BeatBox *beatbox) {
@@ -99,15 +122,18 @@ void BeatBox_cleanup(BeatBox *beatbox) {
         AudioMixer_freeWaveFileData(&beatbox->data.rock.kick);
         AudioMixer_freeWaveFileData(&beatbox->data.rock.snare);
         AudioMixer_freeWaveFileData(&beatbox->data.rock.hihat);
+        AudioMixer_freeWaveFileData(&beatbox->data.custom.kick);
+        AudioMixer_freeWaveFileData(&beatbox->data.custom.snare);
+        AudioMixer_freeWaveFileData(&beatbox->data.custom.hihat);
 
-        if (beatbox->data.custom.sounds) {
-        for (int i = 0; i < beatbox->data.custom.numSounds; i++) {
-            AudioMixer_freeWaveFileData(&beatbox->data.custom.sounds[i]);
-        }
-        free(beatbox->data.custom.sounds);
-        beatbox->data.custom.sounds = NULL;
-        beatbox->data.custom.numSounds = 0;
-        }
+        // if (beatbox->data.custom.sounds) {
+        // for (int i = 0; i < beatbox->data.custom.numSounds; i++) {
+        //     AudioMixer_freeWaveFileData(&beatbox->data.custom.sounds[i]);
+        // }
+        // free(beatbox->data.custom.sounds);
+        // beatbox->data.custom.sounds = NULL;
+        // beatbox->data.custom.numSounds = 0;
+
     // beatbox->type = NONE;  // optional: reset type after cleanup
 }
 

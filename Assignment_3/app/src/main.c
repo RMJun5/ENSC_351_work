@@ -19,7 +19,7 @@
 
 BeatBox beatbox;
 int bpm = 100;
-int vol = 0;
+int vol = 50;
 
 
 // ACTION CALLBACKS FOR ENCODER AND JOYSTICK
@@ -38,16 +38,6 @@ void encoderAction(Rotation input, int *bpm, BeatBox *beatbox) {
 
 
 void joystickAction(Direction input, int *vol) {
-    // int v = AudioMixer_getVolume();
-    // if (input != IDLE && input == prev_js) {
-    //     if (input == JS_UP) v += 5;
-    //     else if (input == JS_DOWN) v -= 5;
-    //     if (v < 0) v = 0;
-    //     if (v > 100) v = 100;
-    //     AudioMixer_setVolume(v);
-    //     *vol = v;
-    //     printf("Volume: %d\n", v);
-    // }
     if (input == JS_UP) *vol += 5;
     else if (input == JS_DOWN) *vol -= 5;
 
@@ -71,6 +61,7 @@ void* drum_thread(void* arg) {
                 BeatBox_playRock(&beatbox, bpm);
                 break;
             case CUSTOM:
+                BeatBox_playCustom(&beatbox, bpm);
                 break;
             case NONE:
                 break;
@@ -88,6 +79,7 @@ void* encoder_thread(void* arg) {
         if (user_input != STOPPED && user_input != prev_input) {
             encoderAction(user_input, &bpm, &beatbox);
         }
+        Period_markEvent(PERIOD_EVENT_SAMPLE_ACCEL);
         prev_input = user_input;
         usleep(10000);
     }
@@ -99,13 +91,51 @@ void* joystick_thread(void* arg) {
     Direction input_js;
     while (1) {
         input_js = joystick();
-        if (input_js != IDLE) {  // act whenever joystick is moved
+        if (input_js != IDLE && input_js != prev_js) {  // act whenever joystick is moved
             joystickAction(input_js, &vol);
         }
         prev_js = input_js;
-        usleep(10000);
+
+        Period_markEvent(PERIOD_EVENT_SAMPLE_AUDIO);
+        usleep(1000);
     }
     return NULL;
+}
+
+void* udp_thread(void* arg) {
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+
+    struct sockaddr_in hostAddr;
+    hostAddr.sin_family = AF_INET;
+    hostAddr.sin_port = htons(PORT);
+    hostAddr.sin_addr.s_addr = inet_addr("192.168.7.1");
+
+    unsigned long lastPrint = time(NULL);
+
+    while (1) {
+        unsigned long now = time(NULL);
+        if (now != lastPrint) {   // 1Hz
+            lastPrint = now;
+
+            Period_statistics_t statsAudio, statsAccel;
+            Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_AUDIO, &statsAudio);
+            Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_ACCEL, &statsAccel);
+
+                char buffer[256];
+                snprintf(buffer, sizeof(buffer),
+                        "Audio[%.2f, %.2f], avg: %.2f; Accel[%.2f, %.2f], avg: %.2f",
+                        statsAudio.minPeriodInMs,
+                        statsAudio.maxPeriodInMs,
+                        statsAudio.avgPeriodInMs,
+                        statsAccel.minPeriodInMs,
+                        statsAccel.maxPeriodInMs,
+                        statsAccel.avgPeriodInMs);
+
+                sendto(sock, buffer, strlen(buffer), 0, (struct sockaddr *)&hostAddr, sizeof(hostAddr));
+        }
+
+        usleep(1000); // small sleep
+    }
 }
 
 
@@ -121,15 +151,15 @@ int main(void) {
     Direction prev_js = IDLE;    
 
     // Beatbox
-    beatbox.type = ROCK;
+    beatbox.type = NONE;
 
-    // Network
-    unsigned long lastPrint = time(NULL);
-    int sock = socket(AF_INET, SOCK_DGRAM, 0);
-    struct sockaddr_in hostAddr;
-    hostAddr.sin_family = AF_INET;
-    hostAddr.sin_port = htons(12345);
-    hostAddr.sin_addr.s_addr = inet_addr("192.168.7.1");
+    // // Network
+    // unsigned long lastPrint = time(NULL);
+    // int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    // struct sockaddr_in hostAddr;
+    // hostAddr.sin_family = AF_INET;
+    // hostAddr.sin_port = htons(12345);
+    // hostAddr.sin_addr.s_addr = inet_addr("192.168.7.1");
 
     // Initialize hardware and period timer
     AudioMixer_init();
@@ -138,6 +168,8 @@ int main(void) {
     Period_init();
         
     pthread_t drum, enc, js;
+    pthread_t udp;
+    pthread_create(&udp, NULL, udp_thread, NULL);
     pthread_create(&drum, NULL, drum_thread, NULL);
     pthread_create(&enc, NULL, encoder_thread, NULL);
     pthread_create(&js, NULL, joystick_thread, NULL);
@@ -147,8 +179,8 @@ int main(void) {
     pthread_join(js, NULL);
         
 
-        Period_markEvent(PERIOD_EVENT_SAMPLE_AUDIO);
-        Period_markEvent(PERIOD_EVENT_SAMPLE_ACCEL);
+        // Period_markEvent(PERIOD_EVENT_SAMPLE_AUDIO);
+        // Period_markEvent(PERIOD_EVENT_SAMPLE_ACCEL);
 
         // /*
         // Time between refilling audio playback buffer
@@ -166,17 +198,7 @@ int main(void) {
         //         Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_AUDIO, &statsAudio);
         //         Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_ACCEL, &statsAccel);
 
-        //         char buffer[256];
-        //         snprintf(buffer, sizeof(buffer),
-        //                 "Audio[%.2f, %.2f], avg: %.2f; Accel[%.2f, %.2f], avg: %.2f",
-        //                 statsAudio.minPeriodInMs,
-        //                 statsAudio.maxPeriodInMs,
-        //                 statsAudio.avgPeriodInMs,
-        //                 statsAccel.minPeriodInMs,
-        //                 statsAccel.maxPeriodInMs,
-        //                 statsAccel.avgPeriodInMs);
 
-        //         sendto(sock, buffer, strlen(buffer), 0, (struct sockaddr *)&hostAddr, sizeof(hostAddr));
         //         //printf("Sent stats: %s\n", buffer);
         //     }
 

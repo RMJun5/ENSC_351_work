@@ -25,8 +25,9 @@ typedef struct {
 } RockBeat;
 
 typedef struct {
-    wavedata_t *sounds;  // dynamically allocated array of sounds
-    int numSounds;       // number of sounds in the beat
+    wavedata_t kick;
+    wavedata_t snare;
+    wavedata_t hihat;
 } CustomBeat;
 
 typedef struct {
