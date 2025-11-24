@@ -248,7 +248,7 @@ void accelerometer_generate_sound(int16_t x, int16_t y, int16_t z) {
     */
 }
 
-accelerometer_cleanup(void) {
+void accelerometer_cleanup(void) {
     // Cleanup accelerometer resources
     if (!accInitialized) {
         return;
