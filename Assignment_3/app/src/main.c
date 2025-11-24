@@ -80,12 +80,7 @@ static void play_axis_sound(Axis axis) {
     const int SAMPLE_SNARE = 1; // y axis
     const int SAMPLE_HIHAT = 2; // x axis
 
-    // Example call (uncomment & adapt to your API):
-    // AudioMixer_queueSample(SAMPLE_KICK);      // or
-    // BeatBox_playSample(&beatbox, SAMPLE_KICK);
-
     if (axis == AXIS_Z) {
-        // example: call your play function for kick
         BeatBox_playSample(&beatbox, SAMPLE_KICK);
         printf("[AIRDRUM] trigger Z (kick)\n");
     } else if (axis == AXIS_Y) {
@@ -371,91 +366,6 @@ void* udp_receive_thread(void* arg) {
         sendto(sock, reply, strlen(reply), 0, (struct sockaddr*)&client, clientLen);
         printf("UDP sent reply: '%s'\n", reply);
     }
-
-    // while (1) {
-    //     socklen_t clientLen = sizeof(client);  // reset each call
-    //     ssize_t len = recvfrom(sock, buffer, sizeof(buffer)-1, 0,
-    //                            (struct sockaddr*)&client, &clientLen);
-    //     if (len < 0) { 
-    //         perror("udp recv error"); 
-    //         continue; 
-    //     }
-
-    //     buffer[len] = '\0';
-    //     printf("UDP received: '%s'\n", buffer);
-
-    //     char reply[128];
-    //     reply[0] = '\0';
-
-    //     // Remove leading spaces
-    //     char* cmd = buffer;
-    //     while (*cmd && isspace((unsigned char)*cmd)) cmd++;
-
-    //     pthread_mutex_lock(&lock); // LOCK START
-
-    //     if (strncmp(cmd, "status", 6) == 0) {
-    //         snprintf(reply, sizeof(reply), "M%d %dbpm vol:%d", g_mode, g_bpm, g_volume);
-    //     }
-    //     else if (strncmp(cmd, "volume", 6) == 0) {
-    //         int v;
-    //         if (parse_int_safe(cmd + 6, &v)) { 
-    //             if (v < 0) v = 0;
-    //             if (v > 100) v = 100;
-    //             g_volume = v; 
-    //             AudioMixer_setVolume(g_volume);
-    //             snprintf(reply, sizeof(reply), "%d", g_volume);   
-    //         } 
-    //         else if (strstr(cmd + 6, "null") != NULL) {
-    //             snprintf(reply, sizeof(reply), "%d", g_volume);
-    //         }
-    //     }
-    //     else if (strncmp(cmd, "tempo", 5) == 0) {
-    //         int t;
-    //         if (parse_int_safe(cmd + 5, &t)) { 
-    //             g_bpm = t; 
-    //             snprintf(reply, sizeof(reply), "%d", g_bpm);
-    //         }
-    //         else if (strstr(cmd + 5, "null") != NULL) {
-    //             snprintf(reply, sizeof(reply), "%d", g_bpm);
-    //         }
-    //     }
-    //     else if (strncmp(cmd, "snare", 5) == 0) {
-    //         pthread_mutex_lock(&lock);
-    //         BeatBox_playSample(&beatbox, 1);   // SNARE sample index
-    //         pthread_mutex_unlock(&lock);
-    //         snprintf(reply, sizeof(reply), "snare");
-    //     }
-    //     else if (strncmp(cmd, "kick", 4) == 0) {
-    //         pthread_mutex_lock(&lock);
-    //         BeatBox_playSample(&beatbox, 0);   // KICK sample index
-    //         pthread_mutex_unlock(&lock);
-    //         snprintf(reply, sizeof(reply), "kick");
-    //     }
-    //     else if (strncmp(cmd, "hihat", 5) == 0) {
-    //         pthread_mutex_lock(&lock);
-    //         BeatBox_playSample(&beatbox, 2);   // HIHAT sample index
-    //         pthread_mutex_unlock(&lock);
-    //         snprintf(reply, sizeof(reply), "hihat");
-    //     }
-    //     else if (strncmp(cmd, "mode", 4) == 0) {
-    //         int m;
-    //         if (parse_int_safe(cmd + 4, &m)) {
-    //             g_mode = m;
-    //             beatbox.type = g_mode;
-    //             snprintf(reply, sizeof(reply), "%d", g_mode);
-    //         }
-    //         else if (strstr(cmd + 4, "null") != NULL) {
-    //             snprintf(reply, sizeof(reply), "%d", g_mode);
-    //         }
-    //     }
-
-    //     pthread_mutex_unlock(&lock); // LOCK END
-
-    //     if (reply[0] != '\0') {
-    //         sendto(sock, reply, strlen(reply), 0, (struct sockaddr*)&client, clientLen);
-    //         printf("Sent reply: '%s'\n", reply);
-    //     }
-    // }
     close(sock);
     return NULL;
 }
