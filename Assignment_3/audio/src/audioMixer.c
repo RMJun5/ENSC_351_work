@@ -11,7 +11,7 @@
 #include <pthread.h>
 #include <limits.h>
 #include <alloca.h> // needed for mixer
-
+#include "periodTimer.h"
 
 static snd_pcm_t *handle;
 
@@ -285,7 +285,7 @@ static void fillPlaybackBuffer(short *buff, int size)
 
 	 pthread_mutex_lock(&audioMutex);
 	 memset(buff, 0, size * sizeof(short));
-
+	
 	 // size is the size of the buffer
 	 // MAX_SOUND_BITES is the size of the soundBites array
 	 for (int j = 0; j < size; j++) {
@@ -311,7 +311,9 @@ static void fillPlaybackBuffer(short *buff, int size)
 			soundBites[i].location++;
 		}
 	}
-	 pthread_mutex_unlock(&audioMutex);
+	pthread_mutex_unlock(&audioMutex);
+
+	Period_markEvent(PERIOD_EVENT_SAMPLE_AUDIO);
 
 }
 

@@ -52,5 +52,6 @@ void BeatBox_init(BeatBox *beatBox);
 void BeatBox_playRock(BeatBox *beatBox, int bpm);
 void BeatBox_playCustom(BeatBox *beatBox, int bpm);
 void BeatBox_cleanup(BeatBox *beatBox);
+void BeatBox_playSample(BeatBox *beatbox, const int sample);
 
 #endif

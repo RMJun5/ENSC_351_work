@@ -6,7 +6,14 @@
 */
 #include <stdio.h>
 #include <stdint.h>
-
+#include <stdlib.h>
+#include <time.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <linux/spi/spidev.h>
 
 // Initialize the accelerometer
 void accelerometer_init(void);
@@ -18,6 +25,8 @@ int16_t accelerometer_read_y(void);
 int16_t accelerometer_read_z(void);
 //Generate a sound based on the accelerometer data
 void accelerometer_generate_sound(int16_t x, int16_t y, int16_t z);
+
+int Accelerometer_read(float *ax, float *ay, float *az);
 
 
 

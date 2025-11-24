@@ -3,18 +3,17 @@
 #include <time.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <linux/spi/spidev.h>
 #include <sys/ioctl.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <fcntl.h>
-
+#include <linux/spi/spidev.h>
 
 
 static bool accInitialized = false;
-static int channelX = 2; // X-axis channel
-static int channelY = 3; // Y-axis channel
-static int channelZ = 5; // Z-axis channel
+static int channelX = 6; // X-axis channel
+static int channelY = 7; // Y-axis channel
+static int channelZ = 8; // Z-axis channel
 static const char* dev = "/dev/spidev0.0"; // SPI device path
 static uint8_t mode = 0; // SPI mode 0
 static uint8_t bits = 8; // bits per word
@@ -53,6 +52,8 @@ void accelerometer_init(void) {
     printf("Accelerometer initialized.\n");
     accInitialized = true;
 }
+
+
 // Read the X-axis data from the accelerometer
 int16_t accelerometer_read_x(void) {
     if (!accInitialized) {
@@ -60,8 +61,38 @@ int16_t accelerometer_read_x(void) {
         return 0;
     }
     int fd = open(dev, O_RDWR);
-    read_adc_ch(fd, channelX, speed);
-    
-    
+    int value = read_adc_ch(fd, channelX, speed);
+    close(fd);
+    return value;
 }
 // Read the Y-axis data from the accelerometer
+int16_t accelerometer_read_y(void) {
+    if (!accInitialized) {
+        printf("Error: Accelerometer not initialized.\n");
+        return 0;
+    }
+    int fd = open(dev, O_RDWR);
+    int value = read_adc_ch(fd, channelY, speed);
+    close(fd);
+    return value;
+}
+
+// read the Z-axis data from the accelerometer
+int16_t accelerometer_read_z(void) {
+    if (!accInitialized) {
+        printf("Error: Accelerometer not initialized.\n");
+        return 0;
+    }
+    int fd = open(dev, O_RDWR);
+    int value = read_adc_ch(fd, channelZ, speed);
+    close(fd);
+    return value;
+}
+
+
+int Accelerometer_read(float *ax, float *ay, float *az) {
+    *ax = accelerometer_read_x();
+    *ay = accelerometer_read_y();
+    *az = accelerometer_read_z();
+    return 0;
+}
