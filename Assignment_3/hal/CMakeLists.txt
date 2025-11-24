@@ -11,9 +11,8 @@ target_include_directories(hal
     BEFORE
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_SOURCE_DIR}/app/include
-        ${CMAKE_SOURCE_DIR}/audio/include
 )
+
 # --- Find libgpiod ---
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBGPIOD REQUIRED libgpiod)
@@ -38,4 +37,3 @@ target_link_libraries(hal
 message(STATUS "libgpiod include dirs: ${LIBGPIOD_INCLUDE_DIRS}")
 message(STATUS "Using libgpiod version: ${LIBGPIOD_VERSION}")
 message(STATUS "libgpiod libraries: ${LIBGPIOD_LIBRARIES}")
-

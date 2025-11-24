@@ -18,5 +18,6 @@ typedef enum {
 } Direction;
 
 Direction joystick();
+Direction getFilteredJoystickInput();
 
 #endif

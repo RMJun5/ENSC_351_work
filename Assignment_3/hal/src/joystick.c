@@ -67,3 +67,25 @@ Direction joystick() {
     else return IDLE;
 
 }
+
+
+Direction getFilteredJoystickInput() {
+    const int N = 12;
+    int up = 0, down = 0, left = 0, right = 0;
+
+    for (int i = 0; i < N; i++) {
+        Direction d = joystick();
+        if (d == JS_UP) up++;
+        if (d == JS_DOWN) down++;
+        if (d == JS_LEFT) left++;
+        if (d == JS_RIGHT) right++;
+        usleep(2000);
+    }
+
+    if (up > N/2)   return JS_UP;
+    if (down > N/2) return JS_DOWN;
+    if (left > N/2) return JS_LEFT;
+    if (right > N/2) return JS_RIGHT;
+
+    return IDLE;
+}

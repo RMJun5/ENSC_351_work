@@ -31,10 +31,9 @@ typedef enum {
     AXIS_Z = 2 
 } Axis;
 
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 BeatBox beatbox;
-int bpm = 100;
-
 int g_bpm = 100;
 int g_volume = 80;
 int g_mode = 0;
@@ -42,32 +41,41 @@ int g_mode = 0;
 
 // ACTION CALLBACKS FOR ENCODER AND JOYSTICK
 
-void encoderAction(Rotation input, int *bpm, BeatBox *beatbox) {
-    if (input == CW) *bpm += 5;
-    else if (input == CCW) *bpm -= 5;
+void encoderAction(Rotation input, BeatBox *beatbox) {
+    pthread_mutex_lock(&lock);
+    if (input == CW) g_bpm += 5;
+    else if (input == CCW) g_bpm -= 5;
     else if (input == PRESSED) {
         if (beatbox->type == ROCK) beatbox->type = CUSTOM;
-        else if (beatbox->type == CUSTOM) beatbox->type = ROCK;
+        else if (beatbox->type == CUSTOM) beatbox->type = NONE;
         else if (beatbox->type == NONE) beatbox->type = ROCK;
 
         printf("Switched beat type to %d\n", beatbox->type);
     }
+    pthread_mutex_unlock(&lock);
 }
 
 
 void joystickAction(Direction input, Direction *prev_js) {
+    pthread_mutex_lock(&lock);
+
+    input = getFilteredJoystickInput();
     if (input != *prev_js) {
         if (input == JS_DOWN)  g_volume -= 5;
         if (input == JS_UP) g_volume += 5;
 
+
+
         AudioMixer_setVolume(g_volume);
         *prev_js = input;
     }
+
     if (g_volume < 0) g_volume = 0;
     if (g_volume > 100) g_volume = 100;
 
-    AudioMixer_setVolume(g_volume);
+    pthread_mutex_unlock(&lock);
     printf("Volume: %d\n", g_volume);
+
 }
 
 static void play_axis_sound(Axis axis) {
@@ -140,10 +148,10 @@ void* drum_thread(void* arg) {
     while (1) {
         switch (beatbox.type) {
             case ROCK:
-                BeatBox_playRock(&beatbox, bpm);
+                BeatBox_playRock(&beatbox, g_bpm);
                 break;
             case CUSTOM:
-                BeatBox_playCustom(&beatbox, bpm);
+                BeatBox_playCustom(&beatbox, g_bpm);
                 break;
             case NONE:
                 break;
@@ -159,7 +167,7 @@ void* encoder_thread(void* arg) {
     while (1) {
         user_input = read_encoder();
         if (user_input != STOPPED && user_input != prev_input) {
-            encoderAction(user_input, &bpm, &beatbox);
+            encoderAction(user_input, &beatbox);
         }
         prev_input = user_input;
         usleep(10000);
@@ -310,7 +318,6 @@ void* udp_receive_thread(void* arg) {
             int t;
             if (parse_int_safe(cmd + 5, &t)) { 
                 g_bpm = t; 
-                bpm = g_bpm;
                 snprintf(reply, sizeof(reply), "%d", g_bpm);
             }
             else if (strstr(cmd + 5, "null") != NULL) {
@@ -334,10 +341,10 @@ void* udp_receive_thread(void* arg) {
             if (parse_int_safe(cmd + 4, &m)) {
                 g_mode = m;
                 beatbox.type = g_mode;
-                snprintf(reply, sizeof(reply), "MODE %d", g_mode);
+                snprintf(reply, sizeof(reply), "%d", g_mode);
             }
             else if (strstr(cmd + 4, "null") != NULL) {
-                snprintf(reply, sizeof(reply), "MODE %d", g_mode);
+                snprintf(reply, sizeof(reply), "%d", g_mode);
             }
         }
 
@@ -442,7 +449,6 @@ int main(void) {
     pthread_create(&ac, NULL, accel_thread, NULL);
     pthread_create(&enc, NULL, encoder_thread, NULL);
     pthread_create(&js, NULL, joystick_thread, NULL);
-    pthread_create(&acc, NULL, accelerSoundThread, NULL);
 
     pthread_join(udp, NULL);
     pthread_join(udp_rec, NULL);
@@ -483,7 +489,6 @@ int main(void) {
     BeatBox_cleanup(&beatbox);
     AudioMixer_cleanup();
     clean_encoder();
-    accelerometer_cleanup();
     // BeatBoxCleanup();
 
     return 0;
