@@ -11,8 +11,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <pthread.h>
-// Sampling rate for air-drum detection (~200 Hz is fine)
-#define ACC_SAMPLE_PERIOD_US 5000  //5 ms
 // Threshold for detecting a hit
 #define XTHRESH 400
 #define YTHRESH 400
@@ -35,16 +33,18 @@ static bool armedX = false;
 static bool armedY = false;
 static bool armedZ = false;
 
-// Thread control flag
-static bool accThreadRunning = false;
-static pthread_t accThread;
-
 static bool accInitialized = false;
 static int adc_fd = -1; // SPI file descriptor
 static const char* dev = "/dev/spidev0.0"; // SPI device path
 static uint8_t mode = 0; // SPI mode 0
 static uint8_t bits = 8; // bits per word
 static uint32_t speed = 250000; // clock speed
+
+/* Use the global BeatBox instance from the application so we can queue
+ * individual samples when an axis triggers. The instance is defined in
+ * `app/src/main.c` as `BeatBox beatbox;`.
+ */
+extern BeatBox beatbox;
 
 int read_adc_ch(int fd, int ch, uint32_t speed_hz) {
     uint8_t tx[3] = {   (uint8_t)(0x006 | ((ch & 0x04) >> 2)),
@@ -138,14 +138,6 @@ void accelerometer_init(void) {
     printf("Accelerometer initialized. Baseline X=%d Y=%d Z=%d\n",
            baselineX, baselineY, baselineZ);
     accInitialized = true;
-    accThreadRunning = true;
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    if (pthread_create(&accThread, &attr, accelerSoundThread, NULL) != 0) {
-        perror("accelerometer: pthread_create");
-        accThreadRunning = false;
-    }
-    pthread_attr_destroy(&attr);
 
 }
 // Read the X-axis data from the accelerometer
@@ -256,24 +248,14 @@ void accelerometer_generate_sound(int16_t x, int16_t y, int16_t z) {
     */
 }
 
-static void* accelerSoundThread(void* arg);
-
-/* Use the global BeatBox instance from the application so we can queue
- * individual samples when an axis triggers. The instance is defined in
- * `app/src/main.c` as `BeatBox beatbox;`.
- */
-extern BeatBox beatbox;
-
-static void* accelerSoundThread(void* arg) {
-    (void)arg; // Unused parameter
-    while (accThreadRunning) {
-        int16_t x = accelerometer_read_x();
-        int16_t y = accelerometer_read_y();
-        int16_t z = accelerometer_read_z();
-
-        accelerometer_generate_sound(x, y, z);
-
-        usleep(ACC_SAMPLE_PERIOD_US);
+accelerometer_cleanup(void) {
+    // Cleanup accelerometer resources
+    if (!accInitialized) {
+        return;
     }
-    return NULL;
+    if (adc_fd >= 0) {
+        close(adc_fd);
+        adc_fd = -1;
+    }
+    accInitialized = false;
 }

@@ -18,8 +18,6 @@ int16_t accelerometer_read_y(void);
 int16_t accelerometer_read_z(void);
 //Generate a sound based on the accelerometer data
 void accelerometer_generate_sound(int16_t x, int16_t y, int16_t z);
-// Thread function to continuously read accelerometer data
-void* accelerSoundThread(void* arg);
 //cleanup accelerometer resources
 void accelerometer_cleanup(void);
 

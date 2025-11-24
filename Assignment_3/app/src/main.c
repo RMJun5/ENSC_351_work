@@ -9,7 +9,7 @@
 #include "hal/encoder.h"
 #include <pthread.h>
 #include "hal/joystick.h"
-// #include "hal/accelerometer.h"
+#include "hal/accelerometer.h"
 
 #include <arpa/inet.h>
 
@@ -102,6 +102,21 @@ void* joystick_thread(void* arg) {
     return NULL;
 }
 
+
+void* accelerSoundThread(void* arg) {
+    (void)arg; // Unused parameter
+    while (1) {
+        int16_t x = accelerometer_read_x();
+        int16_t y = accelerometer_read_y();
+        int16_t z = accelerometer_read_z();
+
+        accelerometer_generate_sound(x, y, z);
+
+        usleep(5000); // 5 ms
+    }
+    return NULL;
+}
+
 void* udp_thread(void* arg) {
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -165,18 +180,21 @@ int main(void) {
     AudioMixer_init();
     BeatBox_init(&beatbox);
     encoder_init();
+    accelerometer_init();
     Period_init();
         
-    pthread_t drum, enc, js;
+    pthread_t drum, enc, js, acc;
     pthread_t udp;
     pthread_create(&udp, NULL, udp_thread, NULL);
     pthread_create(&drum, NULL, drum_thread, NULL);
     pthread_create(&enc, NULL, encoder_thread, NULL);
     pthread_create(&js, NULL, joystick_thread, NULL);
+    pthread_create(&acc, NULL, accelerSoundThread, NULL);
 
     pthread_join(drum, NULL);
     pthread_join(enc, NULL);
     pthread_join(js, NULL);
+    pthread_join(acc, NULL);
         
 
         // Period_markEvent(PERIOD_EVENT_SAMPLE_AUDIO);
@@ -210,6 +228,7 @@ int main(void) {
     BeatBox_cleanup(&beatbox);
     AudioMixer_cleanup();
     clean_encoder();
+    accelerometer_cleanup();
     // BeatBoxCleanup();
 
     return 0;
